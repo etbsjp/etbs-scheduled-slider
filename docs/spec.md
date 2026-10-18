@@ -57,25 +57,30 @@
 | `_etss_end` | 表示終了（UTC の Unix 秒。0 ＝ 終了なし） | |
 | `_etss_last_errors` | 前回の保存で出たエラー（表示用の一時状態） | |
 
-- 表示の判定: `start <= now < end`（終了時刻ちょうどには出さない）
-- 日時の入力はサイトのタイムゾーンで受け、保存の前に UTC 秒に直す。2000年より前は形式エラーにする
+- 表示の判定: `start <= now < end`（終了時刻ちょうどには出さない）。開始が 0 以下（未設定・不正）、終了が負の値（不正）のときは出さない
+- 次の切替時刻: 開始・終了のうち、いまより**後**のものの最小。切替時刻ちょうど（= now）は「切り替わった」ものとして数えない
+- 日時の入力はサイトのタイムゾーンで受け、保存の前に UTC 秒に直す。2000年より前・存在しない日付（2月30日など）・夏時間で存在しない時刻は形式エラーにする。秒つき（`…T12:00:30`）も受け付ける
+- メタは `register_post_meta()` で型つきで登録する（REST には出さない。`_` 始まりの保護されたメタのまま）。キーの置き場は `ETSS_Meta` の定数1か所
 
 ## 3. ひな形（D5）
 
 - `etss_register_templates` アクションの中で `etss_register_template( string $id, array $args )` を呼んで登録する
+- 登録時に定義を検査する（`ETSS_Templates::normalize()`。WP に依存せず PHPUnit で確かめる）。誤りがあれば登録せず、`_doing_it_wrong()` で知らせて `false` を返す。同じ ID の二重登録も同じ（先のものを守る）
+  - ID（ひな形・画像枠）は英小文字・数字・ハイフン・アンダースコアで、英小文字か数字から始める
 - `$args`
-  - `label`：管理画面に出す名前
-  - `slots`：画像枠の配列。枠 ID ごとに次を持つ（並びが編集画面の並び）
-    - `label`（例「横長（PC・タブレット）」）
-    - `description`（見分ける手がかり。例「NEW の文字が無い版」）
-    - `required`（bool）
-    - `ratio`（想定の縦横比。外れたら警告）
-    - `preview_dim`（プレビューに暗幕をかけるか）
+  - `label`：管理画面に出す名前（必須）
+  - `slots`：画像枠の配列（1つ以上、必須）。枠 ID ごとに次を持つ（並びが編集画面の並び）。「枠 ID => 定義」の形のほか、定義に `id` を持たせた並びの形でも渡せる（後者は ID の重複を検出できる。重複はエラー）
+    - `label`（例「横長（PC・タブレット）」。必須）
+    - `description`（見分ける手がかり。例「NEW の文字が無い版」。既定は空）
+    - `required`（bool。既定 false）
+    - `ratio`（想定の縦横比＝横÷縦の正の数。外れたら警告。既定 null）
+    - `preview_dim`（プレビューに暗幕をかけるか。既定 false）
   - `render_item`：`callable( array $slide, array $context ): string`。スライド1枚の**中身**の HTML を返す。外側の `swiper-slide` の div は本体が付ける
+    - 描画を作る #4 までは省略できる（本体の `vk-image` も #4 で足す）。指定したなら呼び出せる値でなければならない。#4 で、描画の時点で `render_item` が無いひな形は何も出さないようにする
     - `$context` には `index`（0 始まり）と `is_first` を入れる
     - `is_first` は LCP 用。1枚目の目に見える画像は `loading` を付けない
-  - `default_options`：このひな形で新しいスライダーを作ったときの動きの既定値
-  - `item_class`：`swiper-slide` の div に足す class（例 `vk_valign-center vk_slider_item-paddingLR-zero`）
+  - `default_options`：このひな形で新しいスライダーを作ったときの動きの既定値。§2.1 の項目名だけを受け付ける（知らないキーは typo として登録を弾く）。本体の既定値に重ねて使う
+  - `item_class`：`swiper-slide` の div に足す class（例 `vk_valign-center vk_slider_item-paddingLR-zero`）。英数字・ハイフン・アンダースコア・空白だけ
   - `import_item`：`callable( array $parsed ): array`。§8 の移行コマンドが、VK のスライダー項目1つを枠 ID → 添付ファイル ID に割り当てるときに使う。任意
 - 本体のひな形 `vk-image`
   - 画像枠は1つ（必須）
@@ -87,7 +92,9 @@
 ### 4.1 メニュー
 
 - 「スライダー」の下に「スライド」（一覧・新規）と「スライダー」（一覧・新規）を置く
-- 権限は D9 のとおり
+  - 親のメニュー「スライダー」はスライドの投稿タイプ（`etss_slide`）が作る。スライダーの投稿タイプ（`etss_slider`）はその子（`show_in_menu` にスライドの一覧を指定）にする
+  - 子の投稿タイプには WP が「追加」を作らないので、「スライダーを追加」は `add_submenu_page()` で足す
+- 権限は D9 のとおり。`etss_capability` は投稿タイプの登録時（`init`）に1回読む。文字列でない・空の値は `edit_pages` に戻す
 
 ### 4.2 スライダーの編集画面
 
@@ -202,9 +209,10 @@
 
 ### 5.4 少ないとき（D8）
 
-- ループに要る枚数 ＝ `ceil( 最大の slidesPerView )` ＋（`centeredSlides` で、その値が偶数なら 1）＋ `slidesPerGroup`（one-by-one なら 1）
+- ループに要る枚数 ＝ `ceil( 最大の slidesPerView )` ＋（`centeredSlides` で、その値が偶数なら 1）＋ `slidesPerGroup`（one-by-one なら 1。それ以外の `slides-per-view` は一度に見せる枚数＝ `ceil( 最大の slidesPerView )`）
   - 例: 1.3 枚見せ・中央寄せ → 2＋1＋1 ＝ 4
-- ループが有効で、枚数が 2 以上かつ要る枚数未満なら、並びを繰り返して要る枚数以上にする
+  - 最大の slidesPerView は、Mobile・Tablet・PC のうち最大（数値でない・1 未満は 1 として扱う）
+- ループが有効で、枚数が 2 以上かつ要る枚数未満なら、並びを繰り返して要る枚数以上にする（並び全体をそのまま繰り返すので、順番は保たれ、要る枚数を超えることがある）
 - 1 枚なら `loop`・`autoPlay` を false、`pagination` を hide にする
 - この計算は WP に依存しない関数にし、PHPUnit で確かめる
 
@@ -215,6 +223,7 @@
   2. あれば、`do_action( 'litespeed_control_set_ttl', min( 秒数, 上限 ) )` を呼ぶ
      - 上限は `etss_max_ttl` フィルタで、既定は `DAY_IN_SECONDS`
      - 上限が無いと、次の切替が30日後ならページが30日保存される（TTL はトップページの保存期間の設定より優先される）
+     - 秒数は「次の切替時刻 − 現在時刻」で、+1 秒しない。上限が 1 未満の値で渡されたときは、無制限にせず 1 日に戻す（`ETSS_Schedule::cache_ttl()`）
   3. `do_action( 'litespeed_tag_add', 'etss' )` と `do_action( 'litespeed_tag_add', 'etss_<ID>' )` を呼ぶ
 - スライドやスライダーを保存・ゴミ箱へ移動・復元・完全削除したとき: `do_action( 'litespeed_purge', 'etss_<ID>' )`
   - 自動下書きでは消さない
@@ -225,8 +234,11 @@
 - 検証は LSCWP のデバッグログで行う
   - `[Ctrl] X Cache_control TTL -> N` と `[Tag] Add etss` は、LiteSpeed のサーバでなくても API のフックから記録される
   - purge は `LITESPEED_ON` が無いと記録されない。`LITESPEED_ON` が定義されるのは `X-LSCACHE` があるとき・CLI のときだけ（LSCWP 6.4.1 で確認）
-  - そのため Local では、Apache に `SetEnv X-LSCACHE on` を入れて `LITESPEED_ON` を立て、応答の `X-LiteSpeed-Purge`・`X-LiteSpeed-Tag` のヘッダとログで確かめる（#1 で陽性対照を取る）
-  - これで確かめられなければ、purge の確認は導入先で行う
+  - そのため Local では、Apache に `SetEnv X-LSCACHE on` を入れて `LITESPEED_ON` を立て、応答の `X-LiteSpeed-Purge`・`X-LiteSpeed-Tag` のヘッダとログで確かめる
+  - 陽性対照は #1 で取った（LSCWP 7.9.1・Local ai-wp-demo）。**出た**: `do_action( 'litespeed_purge', 'etss' )` で、応答の `X-LiteSpeed-Purge: public,b3c_etss` とログ（`added _etss`）の両方が出る。`SetEnv X-LSCACHE on` を入れると `X-LiteSpeed-Cache-Control: public,max-age=<TTL>` も出る
+    - `SetEnv` が無くても、7.9.1 では purge のヘッダとログが出た（6.4.1 のソースの読みと違う）。確かめる手順は `SetEnv` ありを正とする
+    - 目印のヘッダは接頭辞つき（`X-LiteSpeed-Tag: b3c_etss,b3c_etss_1,…`）で、ログは `[Tag] Add --- etss`
+    - CLI（WP-CLI でプラグインを停止）の purge は「CLI request, queue stored」としてログに残り、次の要求で実行される
   - hit/miss は Local では確かめられない。本物の hit/miss は導入先で確かめる
 
 ## 7. 日時プレビュー（D10）
