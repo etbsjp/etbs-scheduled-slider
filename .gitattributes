@@ -1,0 +1,16 @@
+# ★ パターンは必ず先頭 "/" でアンカーすること。
+#   スラッシュ無しは .gitignore と同じ規則で全階層にマッチし、同梱の
+#   inc/plugin-update-checker/ の composer.json や vendor/ まで配布物から消える（更新確認のたびに Fatal）。
+/.gitignore      export-ignore
+/.gitattributes  export-ignore
+/CLAUDE.md       export-ignore
+/docs/           export-ignore
+
+/.github/           export-ignore
+/composer.json      export-ignore
+/composer.lock      export-ignore
+/vendor/            export-ignore
+/.phpcs.xml.dist    export-ignore
+
+/tests/              export-ignore
+/phpunit.xml.dist    export-ignore
