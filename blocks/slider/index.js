@@ -40,6 +40,17 @@
 	}
 
 	/**
+	 * 警告（Notice）を、前の要素から離して置く。Notice 自体の外側の余白は 0 のため、
+	 * セレクトなどにくっつかないよう、包む要素で上に余白を付ける（design-rules.md「余白」）。
+	 *
+	 * @param {Object} notice Notice の要素。
+	 * @return {Object} 要素。
+	 */
+	function spaced( notice ) {
+		return el( 'div', { style: { margin: '16px 0 0' } }, notice );
+	}
+
+	/**
 	 * 選んだスライダーの状況（枚数・次の切り替え・リンク）を作る。
 	 *
 	 * @param {Object|null} slider 状況。無ければ null。
@@ -48,10 +59,12 @@
 	 */
 	function renderStatus( slider, id ) {
 		if ( ! slider ) {
-			return el(
-				Notice,
-				{ status: 'warning', isDismissible: false },
-				'選んだスライダー（#' + id + '）が見つかりません。別のスライダーを選び直してください。'
+			return spaced(
+				el(
+					Notice,
+					{ status: 'warning', isDismissible: false },
+					'選んだスライダー（#' + id + '）が見つかりません。別のスライダーを選び直してください。'
+				)
 			);
 		}
 
@@ -60,10 +73,12 @@
 			return el(
 				Fragment,
 				null,
-				el(
-					Notice,
-					{ status: 'warning', isDismissible: false },
-					'このスライダーは公開されていないため、公開したページには何も出ません。スライダーの設定を開いて公開してください。'
+				spaced(
+					el(
+						Notice,
+						{ status: 'warning', isDismissible: false },
+						'このスライダーは公開されていないため、公開したページには何も出ません。スライダーの設定を開いて公開してください。'
+					)
 				),
 				slider.editUrl ? el( 'p', null, el( ExternalLink, { href: slider.editUrl }, 'スライダーの設定を開く' ) ) : null
 			);
@@ -79,10 +94,12 @@
 				'／' + slider.next
 			),
 			slider.active === 0
-				? el(
-						Notice,
-						{ status: 'warning', isDismissible: false },
-						'いま表示するスライドがありません。公開したページには何も出ません。表示予定や期間を、スライドの一覧で確かめてください。'
+				? spaced(
+						el(
+							Notice,
+							{ status: 'warning', isDismissible: false },
+							'いま表示するスライドがありません。公開したページには何も出ません。表示予定や期間を、スライドの一覧で確かめてください。'
+						)
 				  )
 				: null,
 			el( 'p', null, el( ExternalLink, { href: slider.listUrl }, 'このスライダーのスライドの一覧を開く' ) ),
@@ -105,10 +122,14 @@
 			if ( ! data.vkAvailable ) {
 				children.push(
 					el(
-						Notice,
-						{ key: 'vk', status: 'warning', isDismissible: false },
-						data.vkMessage,
-						data.pluginsUrl ? el( 'p', null, el( ExternalLink, { href: data.pluginsUrl }, 'プラグインの画面を開く' ) ) : null
+						'div',
+						{ key: 'vk', style: { margin: '0 0 16px' } },
+						el(
+							Notice,
+							{ status: 'warning', isDismissible: false },
+							data.vkMessage,
+							data.pluginsUrl ? el( 'p', null, el( ExternalLink, { href: data.pluginsUrl }, 'プラグインの画面を開く' ) ) : null
+						)
 					)
 				);
 			}
