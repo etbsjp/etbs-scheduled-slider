@@ -342,10 +342,30 @@ class ETSS_List_Admin {
 			$reasons = ETSS_List::draft_reasons( $result['errors'], $input );
 		}
 
-		$text = esc_html( ETSS_List::format_status( $status, $reasons ) );
+		$text = self::wrap_reasons( esc_html( ETSS_List::format_status( $status, $reasons ) ) );
 
 		// 表示中だけ太字にする（色は足さない）。
 		echo ETSS_Display::STATUS_ACTIVE === $status ? '<strong>' . $text . '</strong>' : $text; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_html 済み。
+	}
+
+	/**
+	 * 状態の文言のうち、理由の括弧の中を語句ごとに折り返せないようにする（語句の途中で改行されないため）。
+	 *
+	 * @param string $escaped esc_html 済みの状態の文言（例「下書き（画像不足・リンク先なし）」）。
+	 * @return string 理由を span で囲んだ HTML。括弧が無ければそのまま。
+	 */
+	private static function wrap_reasons( $escaped ) {
+		if ( ! preg_match( '/^(.*?)（(.+)）$/us', $escaped, $m ) ) {
+			return $escaped;
+		}
+
+		$parts = preg_split( '/(・|…)/u', $m[2], -1, PREG_SPLIT_DELIM_CAPTURE );
+		$inner = '';
+		foreach ( $parts as $part ) {
+			$inner .= ( '・' === $part || '…' === $part || '' === $part ) ? $part : '<span class="etss-status__reason">' . $part . '</span>';
+		}
+
+		return $m[1] . '（' . $inner . '）';
 	}
 
 	/**
@@ -517,7 +537,8 @@ class ETSS_List_Admin {
 			return;
 		}
 
-		$sliders = self::load_slider_names();
+		// スライダーで絞り込んでいるときは、要約も警告もそのスライダーの分だけにする。
+		$sliders = ETSS_List::select_sliders( self::load_slider_names(), ETSS_Slide_Admin::read_request_slider_id() );
 		if ( ! $sliders ) {
 			return;
 		}

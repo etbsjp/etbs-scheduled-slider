@@ -430,6 +430,46 @@ class ListTest extends TestCase {
 	}
 
 	/**
+	 * ETSS_List::select_sliders() のテスト（スライダーの絞り込みに、要約と警告も合わせる）。
+	 *
+	 * @return void
+	 */
+	public function test_select_sliders() {
+		$sliders = array(
+			10 => 'トップ',
+			20 => '特集',
+			30 => 'お知らせ',
+		);
+
+		$test_cases = array(
+			array(
+				'test_condition_name' => '絞り込みなし（0）は全スライダー',
+				'slider_id'           => 0,
+				'expected'            => $sliders,
+			),
+			array(
+				'test_condition_name' => '絞り込み中は、そのスライダーだけ',
+				'slider_id'           => 20,
+				'expected'            => array( 20 => '特集' ),
+			),
+			array(
+				'test_condition_name' => '文字列の ID でも同じ',
+				'slider_id'           => '30',
+				'expected'            => array( 30 => 'お知らせ' ),
+			),
+			array(
+				'test_condition_name' => '存在しないスライダーなら空',
+				'slider_id'           => 99,
+				'expected'            => array(),
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$this->assertSame( $case['expected'], ETSS_List::select_sliders( $sliders, $case['slider_id'] ), $case['test_condition_name'] );
+		}
+	}
+
+	/**
 	 * ETSS_List::draft_reasons() と format_status() のテスト。
 	 *
 	 * @return void

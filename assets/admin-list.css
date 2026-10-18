@@ -13,6 +13,15 @@
 	width: 16%;
 }
 
+/* 状態の語句が途中で改行されないよう、行頭禁則をブラウザに任せ、理由の括弧は語句ごとに折り返す。 */
+.post-type-etss_slide .wp-list-table td.column-etss_status {
+	line-break: strict;
+}
+
+.etss-status__reason {
+	white-space: nowrap;
+}
+
 .post-type-etss_slide .wp-list-table .column-etss_start,
 .post-type-etss_slide .wp-list-table .column-etss_end {
 	width: 11em;

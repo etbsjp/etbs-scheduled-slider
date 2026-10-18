@@ -193,6 +193,21 @@ class ETSS_List {
 	}
 
 	/**
+	 * 要約と警告に出すスライダーを、スライダーの絞り込みに合わせて選ぶ。
+	 *
+	 * @param array $sliders   スライダーの投稿 ID => 名前。
+	 * @param int   $slider_id 絞り込むスライダーの投稿 ID（0 ならすべて）。
+	 * @return array 要約と警告に出すスライダー（投稿 ID => 名前）。絞り込み先が無ければ空。
+	 */
+	public static function select_sliders( array $sliders, $slider_id = 0 ) {
+		if ( 0 === (int) $slider_id ) {
+			return $sliders;
+		}
+
+		return array_key_exists( (int) $slider_id, $sliders ) ? array( (int) $slider_id => $sliders[ (int) $slider_id ] ) : array();
+	}
+
+	/**
 	 * 行のうち、表示に関わるもの（表示中・表示予定）だけを返す。
 	 *
 	 * @param array $rows 行の配列。
