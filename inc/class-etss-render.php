@@ -183,6 +183,36 @@ class ETSS_Render {
 	}
 
 	/**
+	 * 選ばれたスライドから、スライド1枚分の HTML の配列を作る。`render_item` が空（や文字列以外）を返したスライドは除く。
+	 *
+	 * 出る枚数はここで決まるので、ループ・自動送り・ドットの調整や繰り返しは、この結果の枚数で行うこと。
+	 * `index`・`is_first` は、除いたあとの並びで数える（先頭に空が出ても、実際の先頭に `is_first` が付く）。
+	 *
+	 * @param array    $selected    select_slides() の結果。
+	 * @param callable $render_item ひな形の `render_item`。
+	 * @param string   $item_class  ひな形の `item_class`。
+	 * @return string[] slide_html() の結果の配列（添字は 0 から）。
+	 */
+	public static function build_slide_htmls( array $selected, $render_item, $item_class ) {
+		$slide_htmls = array();
+		foreach ( $selected as $slide ) {
+			$content = call_user_func(
+				$render_item,
+				$slide,
+				array(
+					'index'    => count( $slide_htmls ),
+					'is_first' => array() === $slide_htmls,
+				)
+			);
+			if ( is_string( $content ) && '' !== $content ) {
+				$slide_htmls[] = self::slide_html( $content, $item_class );
+			}
+		}
+
+		return $slide_htmls;
+	}
+
+	/**
 	 * スライダー全体の HTML を作る。VK のスライダー（`vk-blocks/slider`）が保存する HTML と同じ形。
 	 *
 	 * 外枠は `wp-block-vk-blocks-slider swiper vk_slider vk_slider_<blockId> etss-slider etss-slider-<ID> <追加の class>`。

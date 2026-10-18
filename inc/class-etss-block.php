@@ -150,28 +150,16 @@ class ETSS_Block {
 			return '';
 		}
 
-		// 少ないときの扱い（1枚ならループを止める・ループに足りなければ繰り返す）。
-		$options  = self::load_options( $slider_id, $template );
-		$options  = ETSS_Loop::adjust_options( $options, count( $selected ) );
-		$selected = ETSS_Loop::repeat_for_loop( $selected, $options );
-
-		$slide_htmls = array();
-		foreach ( $selected as $slide ) {
-			$content = call_user_func(
-				$template['render_item'],
-				$slide,
-				array(
-					'index'    => count( $slide_htmls ),
-					'is_first' => array() === $slide_htmls,
-				)
-			);
-			if ( is_string( $content ) && '' !== $content ) {
-				$slide_htmls[] = ETSS_Render::slide_html( $content, $template['item_class'] );
-			}
-		}
+		// 先にスライドの HTML を作り、空を返したものを除く。枚数に依る処理は、実際に出る枚数で決めるため。
+		$slide_htmls = ETSS_Render::build_slide_htmls( $selected, $template['render_item'], $template['item_class'] );
 		if ( ! $slide_htmls ) {
 			return '';
 		}
+
+		// 少ないときの扱い（1枚ならループを止める・ループに足りなければ繰り返す）。HTML の配列に対して行う。
+		$options     = self::load_options( $slider_id, $template );
+		$options     = ETSS_Loop::adjust_options( $options, count( $slide_htmls ) );
+		$slide_htmls = ETSS_Loop::repeat_for_loop( $slide_htmls, $options );
 
 		// 同じスライダーを1ページに複数回置いたときは、VK の JS が別々に起動できるよう blockId を分ける。
 		self::$instances[ $slider_id ] = ( isset( self::$instances[ $slider_id ] ) ? self::$instances[ $slider_id ] : 0 ) + 1;

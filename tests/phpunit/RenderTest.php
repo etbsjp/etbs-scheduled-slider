@@ -360,6 +360,65 @@ class RenderTest extends TestCase {
 	}
 
 	/**
+	 * ETSS_Render::build_slide_htmls() と、空を除いたあとの枚数での調整のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_build_slide_htmls_skips_empty() {
+		// タイトルが「空」のスライドは空文字を返すひな形。
+		$render = static function ( array $slide, array $context ) {
+			return 'empty' === $slide['title'] ? '' : '<p data-i="' . $context['index'] . '" data-first="' . ( $context['is_first'] ? 1 : 0 ) . '">' . $slide['title'] . '</p>';
+		};
+
+		$slides = array(
+			$this->slide( array( 'title' => 'empty' ) ),
+			$this->slide( array( 'title' => 'A' ) ),
+			$this->slide( array( 'title' => 'empty' ) ),
+			$this->slide( array( 'title' => 'B' ) ),
+		);
+		$htmls  = ETSS_Render::build_slide_htmls( $slides, $render, 'x' );
+		$this->assertCount( 2, $htmls, '空を返したスライドは除く' );
+		$this->assertStringContainsString( 'data-i="0" data-first="1">A', $htmls[0], '先頭が空でも、実際の先頭に is_first が付く' );
+		$this->assertStringContainsString( 'data-i="1" data-first="0">B', $htmls[1], 'index は除いたあとの並びで数える' );
+
+		// 2枚のうち1枚が空 => 実際に出るのは1枚。ループ・自動送り・ドットを止める。
+		$options = ETSS_Meta::default_options();
+		$one     = ETSS_Render::build_slide_htmls( array_slice( $slides, 0, 2 ), $render, 'x' );
+		$this->assertCount( 1, $one );
+		$adjusted = ETSS_Loop::adjust_options( $options, count( $one ) );
+		$this->assertFalse( $adjusted['loop'], '実際に出るのが1枚ならループを止める' );
+		$this->assertFalse( $adjusted['autoPlay'], '自動送りも止める' );
+		$this->assertSame( 'hide', $adjusted['pagination'], 'ドットも出さない' );
+		$this->assertSame( $one, ETSS_Loop::repeat_for_loop( $one, $adjusted ), '1枚は繰り返さない' );
+
+		// 3枚のうち2枚が空でない・要る枚数が 5 => 繰り返したあとも全て中身のある HTML で、要る枚数以上。
+		$options  = array_merge(
+			ETSS_Meta::default_options(),
+			array(
+				'loop'                => true,
+				'slidesPerViewPC'     => 3,
+				'slidesPerViewTablet' => 3,
+				'slidesPerViewMobile' => 3,
+				'centeredSlides'      => true,
+				'slidesPerGroup'      => 'one-by-one',
+			)
+		);
+		$two      = ETSS_Render::build_slide_htmls( array( $slides[0], $slides[1], $slides[3] ), $render, 'x' );
+		$repeated = ETSS_Loop::repeat_for_loop( $two, ETSS_Loop::adjust_options( $options, count( $two ) ) );
+		$this->assertGreaterThanOrEqual( ETSS_Loop::required_count( $options ), count( $repeated ), '繰り返したあとの枚数が、要る枚数を下回らない' );
+		foreach ( $repeated as $html ) {
+			$this->assertStringContainsString( 'vk_slider_item_container"><p', $html, '空のスライドが混ざらない' );
+		}
+
+		// 全て空 / 文字列以外 => 何も出さない。
+		$null_render = static function () {
+			return null;
+		};
+		$this->assertSame( array(), ETSS_Render::build_slide_htmls( array( $slides[0], $slides[2] ), $render, 'x' ), '全て空なら空の配列' );
+		$this->assertSame( array(), ETSS_Render::build_slide_htmls( array( $slides[1] ), $null_render, 'x' ), '文字列以外も除く' );
+	}
+
+	/**
 	 * ETSS_Block::keep_no_lazy() のテスト。
 	 *
 	 * @return void
