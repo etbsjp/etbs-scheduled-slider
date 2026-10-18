@@ -985,7 +985,7 @@ class ETSS_Slide_Admin {
 		);
 		echo ' <button type="button" class="button" id="etss-start-now">今すぐ表示する</button>';
 		echo '</div>';
-		printf( '<p class="etss-writeback" id="etss-start-writeback">%s</p><p class="screen-reader-text" id="etss-start-live" aria-live="polite"></p>', esc_html( null === $start_ts ? '' : ETSS_Display::describe_start( $start_ts, $now, $timezone ) ) );
+		printf( '<p class="etss-writeback" id="etss-start-writeback">%s</p><p class="screen-reader-text" id="etss-start-live" aria-live="polite"></p>', null === $start_ts ? '' : ETSS_Display::writeback_html( ETSS_Display::describe_start( $start_ts, $now, $timezone ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- writeback_html() はエスケープ済みの HTML を返す。
 		echo '<p class="description" id="etss-desc-start">この日時になると、スライダーに表示されます。「今すぐ表示する」を押すと、いまの日時を入力します。</p>';
 		self::render_field_error( 'start', $errors );
 		echo '</div>';
@@ -1002,7 +1002,7 @@ class ETSS_Slide_Admin {
 		);
 		echo ' <button type="button" class="button-link" id="etss-end-clear">表示終了日時を空にする</button>';
 		echo '</div>';
-		printf( '<p class="etss-writeback" id="etss-end-writeback">%s</p><p class="screen-reader-text" id="etss-end-live" aria-live="polite"></p>', esc_html( ETSS_Display::describe_end( null === $end_ts ? 0 : $end_ts, $now, $timezone ) ) );
+		printf( '<p class="etss-writeback" id="etss-end-writeback">%s</p><p class="screen-reader-text" id="etss-end-live" aria-live="polite"></p>', ETSS_Display::writeback_html( ETSS_Display::describe_end( null === $end_ts ? 0 : $end_ts, $now, $timezone ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- writeback_html() はエスケープ済みの HTML を返す。
 		echo '<p class="description" id="etss-desc-end">この日時になると、表示から消えます。空欄なら消えません。</p>';
 		self::render_field_error( 'end', $errors );
 		echo '</div>';

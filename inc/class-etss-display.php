@@ -191,6 +191,25 @@ class ETSS_Display {
 	}
 
 	/**
+	 * 書き戻しの文言を HTML にする。末尾の「（あと3日4時間）」の中身を、折り返さない span で包む。
+	 *
+	 * assets/admin-slide.js の setWriteback() と同じ形にそろえること。
+	 *
+	 * @param string $text describe_start() / describe_end() の結果。
+	 * @return string エスケープ済みの HTML。
+	 */
+	public static function writeback_html( $text ) {
+		$text = (string) $text;
+
+		// 「あと〜」「〜前」「まもなく」「たった今」だけが対象（「自分で外すまで〜」の注記は包まない）。
+		if ( ! preg_match( '/^(.*（)([^（）]+)(）)$/u', $text, $m ) || ! preg_match( '/^(あと|まもなく$|たった今$|.*前$)/u', $m[2] ) ) {
+			return esc_html( $text );
+		}
+
+		return esc_html( $m[1] ) . '<span class="etss-writeback__relative">' . esc_html( $m[2] ) . '</span>' . esc_html( $m[3] );
+	}
+
+	/**
 	 * 公開ボックスに足す「表示: 〜」の1行（「表示: 」より後ろ）を返す。
 	 *
 	 * 例「表示予定（11/06（金）12:00 から）」。

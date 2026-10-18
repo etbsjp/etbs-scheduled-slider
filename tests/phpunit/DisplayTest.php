@@ -162,7 +162,10 @@ class DisplayTest extends TestCase {
 		$this->assertSame( '', ETSS_Display::describe_start( 0, $now, $tokyo ), '未入力は空' );
 
 		$this->assertSame( '→ 2026年11月6日（金）12:00 に表示終了（あと3日4時間）', ETSS_Display::describe_end( $start, $now, $tokyo ) );
-		$this->assertSame( '→ 表示終了日時なし（自分で外すまで表示し続けます）', ETSS_Display::describe_end( 0, $now, $tokyo ) );
+		$note = '→ 表示終了日時なし（自分で外すまで表示し続けます）';
+		$this->assertSame( $note, ETSS_Display::writeback_html( $note ), '注記は包まない' );
+		$this->assertSame( '→ 11/6 に表示開始（<span class="etss-writeback__relative">3日4時間前</span>）', ETSS_Display::writeback_html( '→ 11/6 に表示開始（3日4時間前）' ) );
+		$this->assertSame( '&lt;b&gt;', ETSS_Display::writeback_html( '<b>' ) );
 	}
 
 	/**
@@ -226,5 +229,22 @@ class DisplayTest extends TestCase {
 		foreach ( $test_cases as $case ) {
 			$this->assertSame( $case[2], ETSS_Display::button_name( $case[0], $case[1] ), $case[0] . ' ' . $case[1] );
 		}
+	}
+
+	/**
+	 * 書き戻しの HTML: 末尾の（〜）の中身だけを nowrap の span で包み、他はエスケープすること。
+	 *
+	 * @return void
+	 */
+	public function test_writeback_html_wraps_relative_part() {
+		$this->assertSame(
+			'→ 2026年11月6日（金）12:00 に表示終了（<span class="etss-writeback__relative">あと3日4時間</span>）',
+			ETSS_Display::writeback_html( '→ 2026年11月6日（金）12:00 に表示終了（あと3日4時間）' )
+		);
+		$note = '→ 表示終了日時なし（自分で外すまで表示し続けます）';
+		$this->assertSame( $note, ETSS_Display::writeback_html( $note ), '注記は包まない' );
+		$this->assertSame( '→ 11/6 に表示開始（<span class="etss-writeback__relative">3日4時間前</span>）', ETSS_Display::writeback_html( '→ 11/6 に表示開始（3日4時間前）' ) );
+		$this->assertSame( '&lt;b&gt;', ETSS_Display::writeback_html( '<b>' ) );
+		$this->assertSame( '', ETSS_Display::writeback_html( '' ) );
 	}
 }

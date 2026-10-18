@@ -136,6 +136,18 @@
 	color: #b32d2e;
 }
 
+/* 1行の入力欄の高さをそろえる（WP コアは狭い幅で select だけ 2px 高くなる）。 */
+.etss-field select,
+.etss-field input[type="text"],
+.etss-field input[type="url"],
+.etss-field input[type="datetime-local"],
+.etss-option select,
+.etss-option input[type="number"] {
+	box-sizing: border-box;
+	height: 40px;
+	min-height: 40px;
+}
+
 /* 日時 */
 .etss-datetime-row {
 	display: flex;
@@ -147,6 +159,10 @@
 .etss-writeback {
 	margin: 6px 0 0;
 	font-weight: 600;
+}
+
+.etss-writeback__relative {
+	white-space: nowrap;
 }
 
 .etss-writeback:empty {

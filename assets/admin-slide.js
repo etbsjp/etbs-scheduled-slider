@@ -88,6 +88,19 @@
 	}
 
 	/**
+	 * 書き戻しの文言を入れる。「（あと◯日◯時間）」の塊は、途中で折り返さないよう span で包む。
+	 */
+	function setWriteback( element, label, relative, after ) {
+		element.textContent = '';
+		element.appendChild( document.createTextNode( label + '（' ) );
+		var span = document.createElement( 'span' );
+		span.className = 'etss-writeback__relative';
+		span.textContent = relative;
+		element.appendChild( span );
+		element.appendChild( document.createTextNode( '）' + after ) );
+	}
+
+	/**
 	 * 表示開始・表示終了の横の書き戻しを更新する。announce が true なら、読み上げ用の欄にも同じ文を入れる。
 	 */
 	function updateWritebacks( announce ) {
@@ -98,12 +111,18 @@
 		var end = endInput ? parseLocal( endInput.value ) : null;
 
 		if ( startWriteback ) {
-			startWriteback.textContent = null === start ? '' : '→ ' + formatFull( start ) + ' に表示開始（' + formatRelative( Math.round( ( start - now ) / 1000 ) ) + '）';
+			if ( null === start ) {
+				startWriteback.textContent = '';
+			} else {
+				setWriteback( startWriteback, '→ ' + formatFull( start ) + ' に表示開始', formatRelative( Math.round( ( start - now ) / 1000 ) ), '' );
+			}
 		}
 		if ( endWriteback ) {
-			endWriteback.textContent = null === end
-				? '→ 表示終了日時なし（自分で外すまで表示し続けます）'
-				: '→ ' + formatFull( end ) + ' に表示終了（' + formatRelative( Math.round( ( end - now ) / 1000 ) ) + '）';
+			if ( null === end ) {
+				endWriteback.textContent = '→ 表示終了日時なし（自分で外すまで表示し続けます）';
+			} else {
+				setWriteback( endWriteback, '→ ' + formatFull( end ) + ' に表示終了', formatRelative( Math.round( ( end - now ) / 1000 ) ), '' );
+			}
 		}
 
 		// 画面の文字は入力のたびに更新するが、読み上げは、入力が確定したとき（change・ボタン）だけにする。
