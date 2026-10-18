@@ -3,7 +3,7 @@
  * スライドの編集画面（§4.3）と、保存時の検査・状態の決定（§4.4）。
  *
  * 検査と状態の決め方は、純粋な関数（ETSS_Validator・ETSS_Display・ETSS_Schedule）に任せる。
- * このクラスは、`$_POST`・`time()`・投稿やメタの読み書きといった WordPress に触れる部分（フックの入口）だけを持つ。
+ * このクラスは、`$_POST`・`$_GET`・`time()`・投稿やメタの読み書きといった WordPress に触れる部分（フックの入口）だけを持つ。
  * `validate_slide()` の結果は、1回の保存のあいだ `$entries` に持ち、使い回す。
  *
  * @package etbs-scheduled-slider
@@ -148,7 +148,7 @@ class ETSS_Slide_Admin {
 			return $title;
 		}
 
-		$last = self::read_last_errors( (int) $post_id );
+		$last = self::read_last_errors( (int) $post_id, self::read_request_notice_flag() );
 
 		return ( $last['protected'] && isset( $last['input']['title'] ) && is_string( $last['input']['title'] ) ) ? $last['input']['title'] : $title;
 	}
@@ -377,7 +377,8 @@ class ETSS_Slide_Admin {
 
 			case 'reject':
 				if ( $current ) {
-					$data['post_title']  = $current->post_title;
+					// $data は slash 済みで、フィルターのあとに wp_unslash() される。
+					$data['post_title']  = wp_slash( $current->post_title );
 					$data['post_name']   = $current->post_name;
 					$data['menu_order']  = $current->menu_order;
 					$data['post_status'] = $current->post_status;
@@ -612,12 +613,31 @@ class ETSS_Slide_Admin {
 	}
 
 	/**
+	 * 保存した直後の画面か（URL に `etss_notice` が付いているか）を読む。
+	 *
+	 * @return bool 保存した直後の画面なら true。
+	 */
+	public static function read_request_notice_flag() {
+		return isset( $_GET[ self::NOTICE_ARG ] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- 表示を切り替えるだけで、何も変更しない。
+	}
+
+	/**
+	 * URL で指定されたスライダーの投稿 ID（`etss_slider`）を読む。
+	 *
+	 * @return int 投稿 ID（指定が無い・不正なら 0）。
+	 */
+	public static function read_request_slider_id() {
+		return isset( $_GET['etss_slider'] ) ? ETSS_Validator::parse_id( sanitize_text_field( wp_unslash( $_GET['etss_slider'] ) ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- 初期値を決めるだけで、何も変更しない。
+	}
+
+	/**
 	 * 保存後の画面に出すエラー・警告を読む。
 	 *
-	 * @param int $post_id 投稿 ID。
+	 * @param int  $post_id 投稿 ID。
+	 * @param bool $show    保存した直後の画面か（read_request_notice_flag() の結果）。
 	 * @return array `errors`・`warnings`・`protected`・`input`（無ければ空）。
 	 */
-	private static function read_last_errors( $post_id ) {
+	public static function read_last_errors( $post_id, $show ) {
 		$empty = array(
 			'errors'    => array(),
 			'warnings'  => array(),
@@ -626,7 +646,7 @@ class ETSS_Slide_Admin {
 		);
 
 		// 保存した直後の画面（引数つき）にだけ出す。表示するだけで、何も変更しない。
-		if ( ! isset( $_GET[ self::NOTICE_ARG ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! $show ) {
 			return $empty;
 		}
 
@@ -683,11 +703,12 @@ class ETSS_Slide_Admin {
 	/**
 	 * 編集画面に出す値を決める。保存済みの値。ただし、保存に失敗した直後は、送信された値を戻す。
 	 *
-	 * @param WP_Post $post  投稿。
-	 * @param array   $last  read_last_errors() の結果。
+	 * @param WP_Post $post      投稿。
+	 * @param array   $last      read_last_errors() の結果。
+	 * @param int     $requested URL で指定されたスライダーの投稿 ID（read_request_slider_id() の結果。無ければ 0）。
 	 * @return array `slider_id`（int）・`images`・`url`・`start`・`end`（datetime-local の値）。
 	 */
-	private static function form_values( $post, array $last ) {
+	public static function form_values( $post, array $last, $requested ) {
 		$saved    = self::get_saved( $post->ID );
 		$timezone = wp_timezone();
 		$values   = array(
@@ -709,8 +730,7 @@ class ETSS_Slide_Admin {
 
 		// 新しく作るときは、選ぶ手間を減らす（URL で指定されたスライダー。無ければ、スライダーが1つだけならそれ）。
 		if ( 0 === $values['slider_id'] ) {
-			$requested = isset( $_GET['etss_slider'] ) ? ETSS_Validator::parse_id( sanitize_text_field( wp_unslash( $_GET['etss_slider'] ) ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$sliders   = self::slider_choices();
+			$sliders = self::slider_choices();
 			if ( $requested > 0 && isset( $sliders[ $requested ] ) ) {
 				$values['slider_id'] = $requested;
 			} elseif ( 1 === count( $sliders ) ) {
@@ -760,10 +780,10 @@ class ETSS_Slide_Admin {
 	public static function render_content_box( $post ) {
 		wp_nonce_field( self::NONCE_ACTION . $post->ID, self::NONCE_NAME );
 
-		$last     = self::read_last_errors( $post->ID );
+		$last     = self::read_last_errors( $post->ID, self::read_request_notice_flag() );
 		$errors   = $last['errors'];
 		$warnings = $last['warnings'];
-		$values   = self::form_values( $post, $last );
+		$values   = self::form_values( $post, $last, self::read_request_slider_id() );
 		$sliders  = self::slider_choices();
 		$template = $values['slider_id'] > 0 ? ETSS_Templates::for_slider( $values['slider_id'] ) : null;
 
@@ -943,9 +963,9 @@ class ETSS_Slide_Admin {
 	 * @return void
 	 */
 	public static function render_schedule_box( $post ) {
-		$last     = self::read_last_errors( $post->ID );
+		$last     = self::read_last_errors( $post->ID, self::read_request_notice_flag() );
 		$errors   = $last['errors'];
-		$values   = self::form_values( $post, $last );
+		$values   = self::form_values( $post, $last, self::read_request_slider_id() );
 		$timezone = wp_timezone();
 		$now      = self::now();
 
@@ -1008,7 +1028,7 @@ class ETSS_Slide_Admin {
 			return;
 		}
 
-		$last = self::read_last_errors( $post->ID );
+		$last = self::read_last_errors( $post->ID, self::read_request_notice_flag() );
 		echo '<div class="etss-title-error">';
 		self::render_field_error( 'title', $last['errors'] );
 		echo '</div>';
@@ -1048,7 +1068,7 @@ class ETSS_Slide_Admin {
 			return;
 		}
 
-		$last = self::read_last_errors( $post->ID );
+		$last = self::read_last_errors( $post->ID, self::read_request_notice_flag() );
 
 		if ( $last['errors'] ) {
 			echo '<div class="notice notice-error etss-notice" role="alert"><p><strong>';

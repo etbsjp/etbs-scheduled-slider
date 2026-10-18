@@ -96,6 +96,7 @@ function etss_test_reset_wp() {
 	$GLOBALS['etss_test_attach'] = array();
 	$GLOBALS['etss_test_can']    = true;
 	$_POST                       = array();
+	$_GET                        = array();
 }
 
 /**
@@ -208,6 +209,16 @@ function sanitize_text_field( $text ) {
  */
 function wp_unslash( $value ) {
 	return $value;
+}
+
+/**
+ * wp_slash() のスタブ（文字列だけ addslashes() する）。
+ *
+ * @param mixed $value 値。
+ * @return mixed
+ */
+function wp_slash( $value ) {
+	return is_string( $value ) ? addslashes( $value ) : $value;
 }
 
 /**

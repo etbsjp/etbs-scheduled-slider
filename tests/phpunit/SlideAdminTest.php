@@ -303,4 +303,51 @@ class SlideAdminTest extends TestCase {
 
 		$this->assertSame( $data, ETSS_Slide_Admin::filter_insert_post_data( $data, array( 'ID' => 1 ) ) );
 	}
+
+	/**
+	 * reject のとき、バックスラッシュを含む保存済みタイトルは slash して戻す（フィルターのあとに unslash されるため）。
+	 *
+	 * @return void
+	 */
+	public function test_reject_slashes_saved_title() {
+		$saved             = $this->active_slide();
+		$saved->post_title = 'A\\B "quoted"';
+
+		$data = ETSS_Slide_Admin::apply_decision( $this->insert_data(), 'publish', 'reject', $saved, '', '' );
+
+		$this->assertSame( addslashes( $saved->post_title ), $data['post_title'] );
+		$this->assertSame( $saved->post_title, stripslashes( $data['post_title'] ), 'unslash すると保存済みの値に戻る' );
+	}
+
+	/**
+	 * URL の引数を読む部分: etss_notice の有無と、etss_slider の整数化。
+	 *
+	 * @return void
+	 */
+	public function test_request_readers_for_get_arguments() {
+		$this->assertFalse( ETSS_Slide_Admin::read_request_notice_flag() );
+		$this->assertSame( 0, ETSS_Slide_Admin::read_request_slider_id() );
+
+		$_GET = array(
+			ETSS_Slide_Admin::NOTICE_ARG => '1',
+			'etss_slider'                => ' 5 ',
+		);
+		$this->assertTrue( ETSS_Slide_Admin::read_request_notice_flag() );
+		$this->assertSame( 5, ETSS_Slide_Admin::read_request_slider_id() );
+
+		$_GET = array( 'etss_slider' => 'abc' );
+		$this->assertSame( 0, ETSS_Slide_Admin::read_request_slider_id() );
+	}
+
+	/**
+	 * 保存直後の画面でなければ、保存されたエラーは出さない。出すときは保存した値を読む。
+	 *
+	 * @return void
+	 */
+	public function test_read_last_errors_only_when_shown() {
+		update_post_meta( self::SLIDE_ID, ETSS_Meta::LAST_ERRORS, array( 'errors' => array( 'url' => 'x' ) ) );
+
+		$this->assertSame( array(), ETSS_Slide_Admin::read_last_errors( self::SLIDE_ID, false )['errors'] );
+		$this->assertSame( array( 'url' => 'x' ), ETSS_Slide_Admin::read_last_errors( self::SLIDE_ID, true )['errors'] );
+	}
 }
