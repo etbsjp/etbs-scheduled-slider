@@ -13,13 +13,14 @@
 	width: 16%;
 }
 
-/* 状態の語句が途中で改行されないよう、行頭禁則をブラウザに任せ、理由の括弧は語句ごとに折り返す。 */
+/* 状態の語句が途中で改行されないよう、行頭禁則をブラウザに任せ、理由は語句単位で折り返す（入りきらないときだけ最後の手段で切って、隣の列に重ならないようにする）。 */
 .post-type-etss_slide .wp-list-table td.column-etss_status {
 	line-break: strict;
 }
 
 .etss-status__reason {
-	white-space: nowrap;
+	word-break: keep-all;
+	overflow-wrap: anywhere;
 }
 
 .post-type-etss_slide .wp-list-table .column-etss_start,
