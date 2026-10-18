@@ -105,7 +105,7 @@ class ETSS_List_Admin {
 	 *
 	 * @return array ETSS_List の「行」の配列。
 	 */
-	private static function load_rows() {
+	public static function load_rows() {
 		if ( null !== self::$rows ) {
 			return self::$rows;
 		}

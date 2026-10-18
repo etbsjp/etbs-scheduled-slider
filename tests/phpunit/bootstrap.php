@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function etss_test_reset() {
 	$GLOBALS['etss_test_filters']        = array();
 	$GLOBALS['etss_test_actions']        = array();
+	$GLOBALS['etss_test_action_calls']   = array();
 	$GLOBALS['etss_test_doing_it_wrong'] = array();
 }
 
@@ -53,13 +54,15 @@ function apply_filters( $hook, $value ) {
 }
 
 /**
- * do_action() の最小スタブ。呼ばれたアクション名を記録する。
+ * do_action() の最小スタブ。呼ばれたアクション名と、その引数を記録する。
  *
- * @param string $hook アクション名。
+ * @param string $hook    アクション名。
+ * @param mixed  ...$args 引数。
  * @return void
  */
-function do_action( $hook ) {
-	$GLOBALS['etss_test_actions'][] = $hook;
+function do_action( $hook, ...$args ) {
+	$GLOBALS['etss_test_actions'][]      = $hook;
+	$GLOBALS['etss_test_action_calls'][] = array_merge( array( $hook ), $args );
 }
 
 /**
@@ -327,6 +330,62 @@ function current_time( $type, $gmt = false ) {
 	return gmdate( 'Y-m-d H:i:s', 1000000 + ( $gmt ? 0 : 0 ) );
 }
 
+/**
+ * esc_attr() のスタブ（esc_html と同じ）。
+ *
+ * @param string $text 文字列。
+ * @return string
+ */
+function esc_attr( $text ) {
+	return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+}
+
+/**
+ * esc_url() のスタブ（属性に入れられる形にエスケープするだけ）。
+ *
+ * @param string $url URL。
+ * @return string
+ */
+function esc_url( $url ) {
+	return htmlspecialchars( (string) $url, ENT_QUOTES, 'UTF-8' );
+}
+
+/**
+ * wp_json_encode() のスタブ。
+ *
+ * @param mixed $value 値。
+ * @return string|false
+ */
+function wp_json_encode( $value ) {
+	return json_encode( $value ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- テスト用のスタブ。
+}
+
+/**
+ * wp_get_attachment_image() のスタブ。etss_test_attach にある画像だけ、渡された属性を並べた img タグを返す。
+ * 値が false の属性は出さない（本物と同じ）。
+ *
+ * @param int          $id   添付ファイルの ID。
+ * @param string|array $size サイズ。
+ * @param bool         $icon アイコンか。
+ * @param array        $attr 属性。
+ * @return string
+ */
+function wp_get_attachment_image( $id, $size = 'thumbnail', $icon = false, $attr = array() ) {
+	unset( $size, $icon );
+	if ( ! isset( $GLOBALS['etss_test_attach'][ $id ] ) ) {
+		return '';
+	}
+
+	$html = '<img src="/img/' . (int) $id . '.jpg"';
+	foreach ( $attr as $name => $value ) {
+		if ( false !== $value ) {
+			$html .= ' ' . $name . '="' . esc_attr( $value ) . '"';
+		}
+	}
+
+	return $html . ' />';
+}
+
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-schedule.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-link.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-loop.php';
@@ -340,3 +399,5 @@ require_once dirname( __DIR__, 2 ) . '/inc/class-etss-list.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-options.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slider-admin.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slide-admin.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-render.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-block.php';

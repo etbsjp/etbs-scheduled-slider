@@ -76,7 +76,8 @@
     - `ratio`（想定の縦横比＝横÷縦の正の数。外れたら警告。既定 null）
     - `preview_dim`（プレビューに暗幕をかけるか。既定 false）
   - `render_item`：`callable( array $slide, array $context ): string`。スライド1枚の**中身**の HTML を返す。外側の `swiper-slide` の div は本体が付ける
-    - 描画を作る #4 までは省略できる（本体の `vk-image` も #4 で足す）。指定したなら呼び出せる値でなければならない。#4 で、描画の時点で `render_item` が無いひな形は何も出さないようにする
+    - 省略できる（描画の時点で `render_item` が無いひな形は、何も出さない）。指定したなら呼び出せる値でなければならない
+    - `$slide` は `id`・`title`（代替テキスト）・`url`・`images`（枠 ID => 添付ファイル ID）・`start`・`end`・`menu_order` を持つ。描画の時点の検査（§5.2）を通ったものだけが渡る
     - `$context` には `index`（0 始まり）と `is_first` を入れる
     - `is_first` は LCP 用。1枚目の目に見える画像は `loading` を付けない
   - `default_options`：このひな形で新しいスライダーを作ったときの動きの既定値。§2.1 の項目名だけを受け付ける（知らないキーは typo として登録を弾く）。本体の既定値に重ねて使う
@@ -84,7 +85,7 @@
   - `import_item`：`callable( array $parsed ): array`。§8 の移行コマンドが、VK のスライダー項目1つを枠 ID → 添付ファイル ID に割り当てるときに使う。任意
 - 本体のひな形 `vk-image`
   - 画像枠は1つ（必須）
-  - VK のスライダー項目に画像ブロックを1つ置き、リンクを付けた形と同じ HTML を出す
+  - VK のスライダー項目に画像ブロックを1つ置き、リンクを付けた形と同じ HTML を出す（`<figure class="wp-block-image size-full"><a href="…"><img …></a></figure>`。`item_class` は `vk_valign-center vk_slider_item-paddingLR-zero`）
 - エスケープはひな形の責任とする。本体は返された HTML を `wp_kses_post` に通さない（VK の属性を落とさないため）。この点は CLAUDE.md に書く
 
 ## 4. 管理画面
@@ -228,7 +229,9 @@
   - スライダーの選択
   - 表示中の枚数と次の切り替え
   - スライドの一覧へのリンク
-- `index.asset.php` を置き、依存のスクリプトを宣言する
+- `blocks/slider/` に `block.json`・`index.js`・`index.asset.php` を置く。ビルドは使わず、JSX を書かずにそのまま読み込む。`index.asset.php` は手で書き、`dependencies` だけを持つ（版数はヘッダの `Version:` を使う）
+  - 依存: `wp-blocks`・`wp-block-editor`・`wp-components`・`wp-element`（`react-jsx-runtime` は使わない）
+  - スライダーの一覧と状況（表示中の枚数・次の切り替え・各画面へのリンク）は、PHP が `window.etssSliderBlock` に渡す（`enqueue_block_editor_assets`）。権限（D9）の無い人には一覧を渡さない
 - 翻訳は使わず、日本語で直接書く（D12）
 
 ### 5.2 VK との連携
@@ -236,11 +239,17 @@
 - VK が使えるかは、`WP_Block_Type_Registry::get_instance()->is_registered( 'vk-blocks/slider' )` で判定する
   - ハンドル名では判定しない。管理画面ではハンドルが登録されないため、誤った警告が出る
 - 描画は `render_block()` に `blockName => 'vk-blocks/slider'` と組み立てた HTML を渡す。VK のブロックとして描画させ、CSS と JS の読み込みを WP に任せる
-  - 外枠: `wp-block-vk-blocks-slider swiper swiper-container vk_slider vk_slider_<blockId> etss-slider etss-slider-<ID> <extra_class>` と `data-vkb-slider`
-  - `blockId` は `etss-<スライダーの ID>`
+  - 外枠: `wp-block-vk-blocks-slider swiper vk_slider vk_slider_<blockId> [alignfull|alignwide] etss-slider etss-slider-<ID> <extra_class>` と `data-vkb-slider`（VK のブロックが保存する項目と同じ並び。`width` は full・wide のとき `alignfull`・`alignwide` にする）
+    - VK 1.128.0 の保存 HTML に `swiper-container` は無いので付けない
+    - 中は `swiper-wrapper`（スライド項目）→ 矢印（`swiper-button-next`・`swiper-button-prev`。VK の既定の `mobile-bottom`）→ ドット（`pagination` が hide のときは出さない）
+    - スライド項目: `wp-block-vk-blocks-slider-item vk_slider_item swiper-slide <item_class>` の div に、`vk_slider_item-background-area` と `vk_slider_item_container`（中にひな形の HTML）を入れる
+  - `blockId` は `etss-<スライダーの ID>`。同じスライダーを1ページに2回以上置いたときは、2回目以降を `etss-<ID>-2`・`etss-<ID>-3` にする（同じ class だと VK の JS が1つ目しか起動しないため）
   - VK の JS は `.vk_slider_<blockId>` で Swiper を起動するので、class と blockId を必ず揃える
+  - スライドの読み出しは、スライダーに属する公開状態のスライドで、終了済みを問い合わせの段階で外す（件数の上限は付けない）。並びは §2.2 の表示順
 - ドットの位置と大きさなど、サイトの見た目の調整はひな形かサイトの CSS で行う。本体は CSS を持たない
 - 描画の時点でも、保存時の検査と同じ必須項目を確かめ、欠けたスライドは出さない（多重の守り。検査を通らずに publish になった経路があっても、壊れたスライドを出さない）
+  - 確かめる項目: 公開状態・属するスライダー・代替テキスト・リンク先・必須の画像枠（画像が実在すること）・同じ画像を別の枠に入れていないこと・表示期間（`ETSS_Render::is_displayable()`）
+  - スライダーが公開状態でない・ひな形が無い・`render_item` が無いときは、何も出さない（目印は付ける）
 - VK が無効なとき
   - ブロックは何も出さない
   - `etss` の目印を付け、nocache にする（壊れた状態を保存させないため）
@@ -251,13 +260,18 @@
 - 1枚目の目に見える画像には `loading` を付けず、`data-no-lazy="1"` を付ける
   - LiteSpeed Cache の画像の遅延読み込みが、1枚目を `data-src` に書き換えないようにするため
 - それ以外は `loading="lazy"` にする
-- これはひな形の責任とする。本体のひな形 `vk-image` はこのとおりにする。`fetchpriority` もひな形が決める
+- これはひな形の責任とする。本体のひな形 `vk-image` はこのとおりにする（1枚目は `fetchpriority="high"` も付ける）。`fetchpriority` もひな形が決める
+- `loading` を付けないままだと、`the_content` などの後処理（`wp_filter_content_tags()`）が `loading="lazy"` を足してしまう。本体は `wp_img_tag_add_loading_attr` フィルターで、`data-no-lazy="1"` の画像には足さない（WordPress 5.5 から）
 
 ### 5.4 少ないとき（D8）
 
-- ループに要る枚数 ＝ `ceil( 最大の slidesPerView )` ＋（`centeredSlides` で、その値が偶数なら 1）＋ `slidesPerGroup`（one-by-one なら 1。それ以外の `slides-per-view` は一度に見せる枚数＝ `ceil( 最大の slidesPerView )`）
-  - 例: 1.3 枚見せ・中央寄せ → 2＋1＋1 ＝ 4
-  - 最大の slidesPerView は、Mobile・Tablet・PC のうち最大。数値でない・0 以下・NaN・INF（`'1e999'` など）は 1 として扱い、上限 20 で打ち切る（1e9 でも繰り返しの枚数が膨らまない）。1 未満の正の値（0.5 など）は 1 枚見せの扱い
+- ループに要る枚数は、VK Blocks の JS（`vk-slider.min.js`・1.128.0）が「枚数が足りない」と判断してループを止める条件に合わせる。画面幅（Mobile・Tablet・PC）ごとに次を求め、最大のものを取る（`ETSS_Loop::required_count()`）
+  - 見せる枚数 ＝ `ceil( slidesPerView )`。`centeredSlides` で偶数なら 1 足す
+  - 一度に送る枚数 ＝ `slides-per-view` なら `floor( slidesPerView )`（1 以上）、`one-by-one` なら 1
+  - 先読み ＝ 中央寄せなら `max( 一度に送る枚数, ceil( 見せる枚数 ÷ 2 ) )`、そうでなければ一度に送る枚数。一度に送る枚数の倍数に切り上げる
+  - 要る枚数 ＝ 見せる枚数 ＋ 先読み。`effect` が fade のときは VK が枚数を指定しないので 2
+  - 例: 1.3 枚見せ・中央寄せ・1枚ずつ → 見せる 3（2 に 1 足す）＋ 先読み 2 ＝ 5（r2 では 4 としていたが、VK 1.128.0 は 4 枚だとループを止める）
+  - slidesPerView は、数値でない・0 以下・NaN・INF（`'1e999'` など）は 1 として扱い、上限 20 で打ち切る（1e9 でも繰り返しの枚数が膨らまない）。1 未満の正の値（0.5 など）は 1 枚見せの扱い
 - ループが有効で、枚数が 2 以上かつ要る枚数未満なら、並びを繰り返して要る枚数以上にする（並び全体をそのまま繰り返すので、順番は保たれ、要る枚数を超えることがある）
 - 1 枚なら `loop`・`autoPlay` を false、`pagination` を hide にする
 - この計算は WP に依存しない関数にし、PHPUnit で確かめる
@@ -270,10 +284,12 @@
      - 上限は `etss_max_ttl` フィルタで、既定は `DAY_IN_SECONDS`
      - 上限が無いと、次の切替が30日後ならページが30日保存される（TTL はトップページの保存期間の設定より優先される）
      - 秒数は「次の切替時刻 − 現在時刻」で、+1 秒しない。上限が 1 未満の値で渡されたときは、無制限にせず 1 日に戻す（`ETSS_Schedule::cache_ttl()`）
+     - 1ページに複数のスライダーがあるときは、最も短い秒数だけを伝える（LiteSpeed Cache は後から伝えた値で上書きするため）
   3. `do_action( 'litespeed_tag_add', 'etss' )` と `do_action( 'litespeed_tag_add', 'etss_<ID>' )` を呼ぶ
 - スライドやスライダーを保存・ゴミ箱へ移動・復元・完全削除したとき: `do_action( 'litespeed_purge', 'etss_<ID>' )`
-  - 自動下書きでは消さない
-  - 削除は `deleted_post_etss_slide` などの、投稿タイプ付きのフックで拾う
+  - スライドは所属するスライダーの目印を捨てる。所属スライダーを付け替えたときは、元と先の両方
+  - 自動下書き・自動保存・リビジョンの保存では消さない
+  - 削除は `before_delete_post` で拾う（投稿タイプで絞る）。`deleted_post_<投稿タイプ>` は WordPress 6.6 からで、発火の時点でメタ（所属スライダー）が消えているため使わない
 - プラグインを停止するとき: `etss` を purge する
 - LiteSpeed Cache が無効でも `do_action` は何もしないだけで、表示は正しい（保存されないので毎回作り直す）
 - LSCWP 6.4.1 のソースで確認済み: 4つのフックは実在し、ブロックの描画中に呼んでも出力バッファを閉じるときにヘッダになる。前提は、LSCWP のバッファが一番外側で、途中で吐き出されないこと
@@ -321,7 +337,7 @@
 ## 10. 配布と運用
 
 - ヘッダ
-  - `Requires at least: 6.3`（`apiVersion: 3` の下限）
+  - `Requires at least: 6.3`（`apiVersion: 3` の下限。#4 で検算し、6.3 のまま。`index.asset.php` の `dependencies` は `wp-blocks`・`wp-block-editor`・`wp-components`・`wp-element` で、いずれも 6.3 より前からある。使った関数・フックの下限は、`wp_img_tag_add_loading_attr` フィルター 5.5・`wp_get_attachment_image()` の `loading => false` 5.5・`register_block_type()` にフォルダを渡す形 5.8・`wp_timezone()` 5.3・`render_block()` 5.0 など。`deleted_post_<投稿タイプ>`（6.6）は使わない）
   - `Requires PHP: 7.4`
   - `Author: ETBS (DAI)`、`Author URI: https://etbs.jp`
   - `Text Domain: etbs-scheduled-slider`

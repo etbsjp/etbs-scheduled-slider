@@ -29,6 +29,10 @@ require_once __DIR__ . '/class-etss-display.php';
 // 一覧の状態・件数・要約・0 枚になる時間帯の計算（WordPress に依存しない）。
 require_once __DIR__ . '/class-etss-list.php';
 require_once __DIR__ . '/class-etss-options.php';
+// スライダーの HTML の組み立て（WordPress にほぼ依存しない）。
+require_once __DIR__ . '/class-etss-render.php';
+// ブロック `etss/slider` とフロントへの描画。
+require_once __DIR__ . '/class-etss-block.php';
 // 管理画面（プラグイン一覧の行）。
 require_once __DIR__ . '/class-etss-admin.php';
 // スライダー・スライドの編集画面と保存。
@@ -70,6 +74,8 @@ function etss_get_template( $id ) {
 ETSS_Post_Types::init();
 ETSS_Meta::init();
 ETSS_Templates::init();
+ETSS_Cache::init();
+ETSS_Block::init();
 ETSS_Admin::init();
 ETSS_Slider_Admin::init();
 ETSS_Slide_Admin::init();

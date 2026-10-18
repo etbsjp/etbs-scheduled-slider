@@ -25,7 +25,7 @@ class LoopTest extends TestCase {
 				'expected'            => 2,
 			),
 			array(
-				'test_condition_name' => '1.3枚見せ・中央寄せ・one-by-one => 2 + 1 + 1 = 4',
+				'test_condition_name' => '1.3枚見せ・中央寄せ・one-by-one => 見せる 3（偶数の 2 に 1 足す）+ 先読み 2 = 5',
 				'input'               => array(
 					'slidesPerViewMobile' => 1.3,
 					'slidesPerViewTablet' => 1.3,
@@ -33,10 +33,10 @@ class LoopTest extends TestCase {
 					'centeredSlides'      => true,
 					'slidesPerGroup'      => 'one-by-one',
 				),
-				'expected'            => 4,
+				'expected'            => 5,
 			),
 			array(
-				'test_condition_name' => '1.3枚見せ・中央寄せでない => 2 + 0 + 1 = 3',
+				'test_condition_name' => '1.3枚見せ・中央寄せでない => 2 + 1 = 3',
 				'input'               => array(
 					'slidesPerViewPC' => 1.3,
 					'centeredSlides'  => false,
@@ -45,13 +45,13 @@ class LoopTest extends TestCase {
 				'expected'            => 3,
 			),
 			array(
-				'test_condition_name' => '中央寄せで見せる枚数が奇数（3） => 3 + 0 + 1 = 4',
+				'test_condition_name' => '中央寄せで見せる枚数が奇数（3） => 3 + 先読み 2 = 5',
 				'input'               => array(
 					'slidesPerViewPC' => 3,
 					'centeredSlides'  => true,
 					'slidesPerGroup'  => 'one-by-one',
 				),
-				'expected'            => 4,
+				'expected'            => 5,
 			),
 			array(
 				'test_condition_name' => '3つの画面幅のうち最大を使う（1 / 2 / 3） => 3 + 1 = 4',
@@ -120,6 +120,81 @@ class LoopTest extends TestCase {
 				'expected'            => 2,
 			),
 			array(
+				'test_condition_name' => '中央寄せ・2枚見せ => 見せる 3 + 先読み 2 = 5',
+				'input'               => array(
+					'slidesPerViewMobile' => 2,
+					'slidesPerViewTablet' => 2,
+					'slidesPerViewPC'     => 2,
+					'centeredSlides'      => true,
+					'slidesPerGroup'      => 'one-by-one',
+				),
+				'expected'            => 5,
+			),
+			array(
+				'test_condition_name' => '中央寄せ・4枚見せ => 見せる 5 + 先読み 3 = 8',
+				'input'               => array(
+					'slidesPerViewMobile' => 4,
+					'slidesPerViewTablet' => 4,
+					'slidesPerViewPC'     => 4,
+					'centeredSlides'      => true,
+					'slidesPerGroup'      => 'one-by-one',
+				),
+				'expected'            => 8,
+			),
+			array(
+				'test_condition_name' => 'slides-per-view・1.5枚見せ => 一度に送る枚数は floor で 1 => 2 + 1 = 3',
+				'input'               => array(
+					'slidesPerViewMobile' => 1.5,
+					'slidesPerViewTablet' => 1.5,
+					'slidesPerViewPC'     => 1.5,
+					'slidesPerGroup'      => 'slides-per-view',
+				),
+				'expected'            => 3,
+			),
+			array(
+				'test_condition_name' => 'slides-per-view・中央寄せ・2枚見せ => 見せる 3、送る 2、先読み max(2, 2) = 2 => 5',
+				'input'               => array(
+					'slidesPerViewMobile' => 2,
+					'slidesPerViewTablet' => 2,
+					'slidesPerViewPC'     => 2,
+					'centeredSlides'      => true,
+					'slidesPerGroup'      => 'slides-per-view',
+				),
+				'expected'            => 5,
+			),
+			array(
+				'test_condition_name' => 'slides-per-view・中央寄せ・3枚見せ => 見せる 3、送る 3、先読み 3 => 6',
+				'input'               => array(
+					'slidesPerViewMobile' => 3,
+					'slidesPerViewTablet' => 3,
+					'slidesPerViewPC'     => 3,
+					'centeredSlides'      => true,
+					'slidesPerGroup'      => 'slides-per-view',
+				),
+				'expected'            => 6,
+			),
+			array(
+				'test_condition_name' => '画面幅ごとに求めて最大を取る（中央寄せ: 1 => 3、2 => 5）',
+				'input'               => array(
+					'slidesPerViewMobile' => 1,
+					'slidesPerViewTablet' => 2,
+					'slidesPerViewPC'     => 1,
+					'centeredSlides'      => true,
+					'slidesPerGroup'      => 'one-by-one',
+				),
+				'expected'            => 5,
+			),
+			array(
+				'test_condition_name' => 'effect が fade => 枚数の指定が効かず 2',
+				'input'               => array(
+					'effect'          => 'fade',
+					'slidesPerViewPC' => 3,
+					'centeredSlides'  => true,
+					'slidesPerGroup'  => 'slides-per-view',
+				),
+				'expected'            => 2,
+			),
+			array(
 				'test_condition_name' => '設定が空 => 2',
 				'input'               => array(),
 				'expected'            => 2,
@@ -164,19 +239,24 @@ class LoopTest extends TestCase {
 				'expected'            => array( 'a', 'b' ),
 			),
 			array(
-				'test_condition_name' => '2枚・要る枚数4 => 並び全体を2回 = 4枚',
+				'test_condition_name' => '2枚・要る枚数5 => 並び全体を3回 = 6枚',
 				'input'               => array( array( 'a', 'b' ), $centered ),
-				'expected'            => array( 'a', 'b', 'a', 'b' ),
+				'expected'            => array( 'a', 'b', 'a', 'b', 'a', 'b' ),
 			),
 			array(
-				'test_condition_name' => '3枚・要る枚数4 => 並び全体を2回 = 6枚（超えてよい）',
+				'test_condition_name' => '3枚・要る枚数5 => 並び全体を2回 = 6枚（超えてよい）',
 				'input'               => array( array( 'a', 'b', 'c' ), $centered ),
 				'expected'            => array( 'a', 'b', 'c', 'a', 'b', 'c' ),
 			),
 			array(
-				'test_condition_name' => '4枚・要る枚数4（ちょうど） => そのまま',
+				'test_condition_name' => '4枚・要る枚数5 => 並び全体を2回 = 8枚',
 				'input'               => array( array( 'a', 'b', 'c', 'd' ), $centered ),
-				'expected'            => array( 'a', 'b', 'c', 'd' ),
+				'expected'            => array( 'a', 'b', 'c', 'd', 'a', 'b', 'c', 'd' ),
+			),
+			array(
+				'test_condition_name' => '5枚・要る枚数5（ちょうど） => そのまま',
+				'input'               => array( array( 'a', 'b', 'c', 'd', 'e' ), $centered ),
+				'expected'            => array( 'a', 'b', 'c', 'd', 'e' ),
 			),
 			array(
 				'test_condition_name' => '2枚・ループ無効 => そのまま',
