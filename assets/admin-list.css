@@ -4,9 +4,13 @@
  * 列の幅。状態の列は最長の語句がぴったり収まる em 幅にして、ほかの列で幅を調整する（状態の語句は途中で折り返さない）。
  * 全部の列を足した幅に満たない画面では、表の最小幅を保って画面全体を横にスクロールさせる（列どうしを重ねて潰さない）。
  * 表を包む枠に overflow を付けないのは、枠が手前の float（表示オプションのボタン・絞り込みのリスト）の横に押し込まれて幅が狭まるため。
+ * 文字を拡大すると列の合計がもっと広がり、横スクロールになるだけで重なりは起きない。
+ * 782px 以下は WP 標準の縮小表示（非主要の列を隠す）なので、最小幅は付けない。
  */
-.post-type-etss_slide .wp-list-table {
-	min-width: 890px;
+@media (min-width: 783px) {
+	.post-type-etss_slide .wp-list-table {
+		min-width: 890px;
+	}
 }
 
 .post-type-etss_slide .wp-list-table .column-etss_thumb {
