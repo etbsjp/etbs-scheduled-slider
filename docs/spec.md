@@ -52,7 +52,7 @@
 |---|---|---|
 | `_etss_slider_id` | 属するスライダーの ID | ○ |
 | `_etss_images` | ひな形の画像枠 ID → 添付ファイル ID の配列 | ひな形の定義による |
-| `_etss_url` | リンク先。`/` で始まるサイト内のパスか、`http(s)://` | ○ |
+| `_etss_url` | リンク先。`/` で始まるサイト内のパスか、`http(s)://`。`//` で始まるものは弾く | ○ |
 | `_etss_start` | 表示開始（UTC の Unix 秒） | ○（D6） |
 | `_etss_end` | 表示終了（UTC の Unix 秒。0 ＝ 終了なし） | |
 | `_etss_last_errors` | 前回の保存で出たエラー（表示用の一時状態） | |
@@ -187,6 +187,7 @@
   - `blockId` は `etss-<スライダーの ID>`
   - VK の JS は `.vk_slider_<blockId>` で Swiper を起動するので、class と blockId を必ず揃える
 - ドットの位置と大きさなど、サイトの見た目の調整はひな形かサイトの CSS で行う。本体は CSS を持たない
+- 描画の時点でも、保存時の検査と同じ必須項目を確かめ、欠けたスライドは出さない（多重の守り。検査を通らずに publish になった経路があっても、壊れたスライドを出さない）
 - VK が無効なとき
   - ブロックは何も出さない
   - `etss` の目印を付け、nocache にする（壊れた状態を保存させないため）
@@ -194,7 +195,10 @@
 
 ### 5.3 読み込み（LCP）
 
-1枚目の目に見える画像には `loading` を付けない。それ以外は `loading="lazy"` にする。`fetchpriority` はひな形が決める。
+- 1枚目の目に見える画像には `loading` を付けず、`data-no-lazy="1"` を付ける
+  - LiteSpeed Cache の画像の遅延読み込みが、1枚目を `data-src` に書き換えないようにするため
+- それ以外は `loading="lazy"` にする
+- これはひな形の責任とする。本体のひな形 `vk-image` はこのとおりにする。`fetchpriority` もひな形が決める
 
 ### 5.4 少ないとき（D8）
 
@@ -218,11 +222,12 @@
 - プラグインを停止するとき: `etss` を purge する
 - LiteSpeed Cache が無効でも `do_action` は何もしないだけで、表示は正しい（保存されないので毎回作り直す）
 - LSCWP 6.4.1 のソースで確認済み: 4つのフックは実在し、ブロックの描画中に呼んでも出力バッファを閉じるときにヘッダになる。前提は、LSCWP のバッファが一番外側で、途中で吐き出されないこと
-- 検証は LSCWP のデバッグログで行う。確かめる行は次の3つ
-  - `[Ctrl] X Cache_control TTL -> N`
-  - `[Tag] Add etss`
-  - 保存時の purge のヘッダ
-  - Local のサーバは LiteSpeed ではないので、hit/miss は確かめられない。本物の hit/miss は導入先で確かめる
+- 検証は LSCWP のデバッグログで行う
+  - `[Ctrl] X Cache_control TTL -> N` と `[Tag] Add etss` は、LiteSpeed のサーバでなくても API のフックから記録される
+  - purge は `LITESPEED_ON` が無いと記録されない。`LITESPEED_ON` が定義されるのは `X-LSCACHE` があるとき・CLI のときだけ（LSCWP 6.4.1 で確認）
+  - そのため Local では、Apache に `SetEnv X-LSCACHE on` を入れて `LITESPEED_ON` を立て、応答の `X-LiteSpeed-Purge`・`X-LiteSpeed-Tag` のヘッダとログで確かめる（#1 で陽性対照を取る）
+  - これで確かめられなければ、purge の確認は導入先で行う
+  - hit/miss は Local では確かめられない。本物の hit/miss は導入先で確かめる
 
 ## 7. 日時プレビュー（D10）
 

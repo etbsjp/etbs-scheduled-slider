@@ -10,7 +10,7 @@ etbs が配布する WordPress プラグイン。共通ルールの正本は `~/
 
 ## PR の書き方
 
-- PR 本文に、対象の issue（この repo の issue）の完全な URL を書く
+- PR 本文に、対象の issue の完全な URL を書く。**`etbsjp/etbs-scheduled-slider` の issue の URL**（task-queue のミラーではない）
 - 閉じるキーワード（`Closes` / `Fixes` / `Resolves`）は付けない。`対象 issue: <URL>` のように参照だけにする
 - **版数（ヘッダの `Version:`）を上げない・`dist` に push しない。** 版数上げ・`dist` への反映は人が行う
 
@@ -52,7 +52,11 @@ etbs が配布する WordPress プラグイン。共通ルールの正本は `~/
 Local の `ai-wp-demo`（`aiwpdemo.etbs.lc`）に、VK Blocks（wordpress.org の無料版）と LiteSpeed Cache を入れて使う。
 **シンボリックリンク設置でよい**（`dirname( __FILE__, N )` を使わない）。
 
-- Local のサーバは LiteSpeed ではないので、hit/miss は出ない。キャッシュの確認は LSCWP のデバッグログ（`[Ctrl] X Cache_control TTL -> N`・`[Tag] Add etss`・purge）で行う
+- Local のサーバは LiteSpeed ではないので、hit/miss は出ない。キャッシュの確認は LSCWP のデバッグログで行う
+  - TTL（`[Ctrl] X Cache_control TTL -> N`）・目印（`[Tag] Add etss`）・nocache は、そのままで記録される
+  - purge は `LITESPEED_ON` が無いと記録されない。Apache に `SetEnv X-LSCACHE on` を入れて立て、応答の `X-LiteSpeed-Purge`・`X-LiteSpeed-Tag` のヘッダで確かめる（#1 で陽性対照を取った手順をここに書き足す）
+- ★ ai-wp-demo は他のプラグインと共用の検証サイト。LiteSpeed Cache は有効化のときと、その後最初に管理画面を開いたときに `.htaccess` を書き換える。入れる前に `.htaccess` を控え、md5 を記録する
+- ★★★ **uninstall の検証は `uninstall_plugin()` を CLI で呼ぶ。管理画面の「削除」は押さない**（シンボリックリンク設置のまま削除すると、リンク先のこの repo の中身が全部消える）
 - エージェントは `<repo>/.claude/worktrees/` で作業するが、Local のプラグインは本体クローンへのシンボリックリンク。実画面で確かめるときは向き先を worktree へ一時的に変え、終わったら戻す
 - CLI 検証では Local の php.ini を `-c` で渡すこと。wp-cli は `-d mysqli.default_socket=<Local のソケット>` を付ける
 
