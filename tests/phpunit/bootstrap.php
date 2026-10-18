@@ -92,3 +92,7 @@ require_once dirname( __DIR__, 2 ) . '/inc/class-etss-meta.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-post-types.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-templates.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-cache.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-validator.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-display.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-options.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slider-admin.php';

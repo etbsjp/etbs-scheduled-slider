@@ -1,0 +1,193 @@
+/* ETBS Scheduled Slider: スライダー・スライドの編集画面 */
+
+/* 入力欄のまとまり */
+.etss-field {
+	margin: 0 0 20px;
+}
+
+.etss-label {
+	display: block;
+	margin-bottom: 4px;
+	font-weight: 600;
+}
+
+.etss-required {
+	display: inline-block;
+	margin-left: 4px;
+	padding: 1px 6px;
+	border-radius: 2px;
+	background: #d63638;
+	color: #fff;
+	font-size: 11px;
+	font-weight: 400;
+	line-height: 1.6;
+	vertical-align: 1px;
+}
+
+.etss-field .description {
+	margin: 4px 0 0;
+}
+
+/* エラー・警告 */
+.etss-field-error,
+.etss-slot__missing {
+	margin: 6px 0 0;
+	color: #d63638;
+	font-weight: 600;
+}
+
+.etss-field-error[hidden] {
+	display: none;
+}
+
+.etss-field [aria-invalid="true"] {
+	border-color: #d63638;
+	box-shadow: 0 0 0 1px #d63638;
+}
+
+.etss-title-error {
+	margin: 4px 0 0;
+}
+
+.etss-slot__warning {
+	margin: 6px 0 0;
+	padding: 6px 10px;
+	border-left: 4px solid #dba617;
+	background: #fcf9e8;
+	color: #1d2327;
+}
+
+.etss-notice__list {
+	margin: 0 0 10px;
+	padding-left: 1.5em;
+	list-style: disc;
+}
+
+.etss-notice [hidden] {
+	display: none;
+}
+
+/* スライダーを選び直したときの案内 */
+.etss-slider-change-note {
+	margin: 6px 0 0;
+	padding: 6px 10px;
+	border-left: 4px solid #2271b1;
+	background: #f0f6fc;
+	color: #1d2327;
+}
+
+.etss-slider-change-note[hidden] {
+	display: none;
+}
+
+/* 画像枠 */
+.etss-slot {
+	padding: 12px;
+	border: 1px solid #c3c4c7;
+	border-radius: 2px;
+}
+
+.etss-slot__preview {
+	position: relative;
+	display: inline-block;
+	max-width: 100%;
+	margin-top: 8px;
+	line-height: 0;
+}
+
+.etss-slot__preview[hidden],
+.etss-slot__meta[hidden],
+.etss-slot__remove[hidden] {
+	display: none;
+}
+
+.etss-slot__preview img {
+	display: block;
+	max-width: 100%;
+	max-height: 220px;
+	height: auto;
+}
+
+/* 暗幕の濃さは、表示側のひな形が決める。プレビューは目安の暗さで重ねる。 */
+.etss-slot__preview--dim::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+}
+
+.etss-slot__meta {
+	margin: 6px 0 0;
+	color: #50575e;
+}
+
+.etss-slot__size {
+	margin-left: 8px;
+}
+
+.etss-slot__buttons {
+	margin: 10px 0 0;
+}
+
+.etss-slot__remove {
+	margin-left: 8px;
+	color: #b32d2e;
+}
+
+/* 日時 */
+.etss-datetime-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	align-items: center;
+}
+
+.etss-writeback {
+	margin: 6px 0 0;
+	font-weight: 600;
+}
+
+.etss-writeback:empty {
+	display: none;
+}
+
+/* 公開ボックス: 日時の編集は使わない（表示開始・表示終了を「表示期間」で入力する）。 */
+body.post-type-etss_slide .misc-pub-curtime,
+body.post-type-etss_slide #timestampdiv {
+	display: none;
+}
+
+/* スライダーの動きの設定 */
+.etss-heading {
+	margin: 24px 0 8px;
+	padding-top: 12px;
+	border-top: 1px solid #dcdcde;
+	font-size: 14px;
+}
+
+.etss-fieldset {
+	margin: 0 0 16px;
+	padding: 0;
+	border: 0;
+}
+
+.etss-fieldset legend {
+	margin-bottom: 6px;
+	padding: 0;
+	font-weight: 600;
+}
+
+.etss-option {
+	margin: 0 0 8px;
+}
+
+.etss-option__help {
+	display: block;
+	margin-top: 2px;
+}
+
+.etss-placements {
+	margin: 0 0 12px;
+	padding-left: 1.5em;
+	list-style: disc;
+}

@@ -23,8 +23,15 @@ require_once __DIR__ . '/class-etss-post-types.php';
 require_once __DIR__ . '/class-etss-templates.php';
 // ページキャッシュとの連携。
 require_once __DIR__ . '/class-etss-cache.php';
+// 表示期間の入力の検査・状態と日時の文言・動きの設定の整形（WordPress に依存しない）。
+require_once __DIR__ . '/class-etss-validator.php';
+require_once __DIR__ . '/class-etss-display.php';
+require_once __DIR__ . '/class-etss-options.php';
 // 管理画面（プラグイン一覧の行）。
 require_once __DIR__ . '/class-etss-admin.php';
+// スライダー・スライドの編集画面と保存。
+require_once __DIR__ . '/class-etss-slider-admin.php';
+require_once __DIR__ . '/class-etss-slide-admin.php';
 
 /**
  * ひな形を登録する。`etss_register_templates` アクションの中で呼ぶ。
@@ -60,6 +67,8 @@ ETSS_Post_Types::init();
 ETSS_Meta::init();
 ETSS_Templates::init();
 ETSS_Admin::init();
+ETSS_Slider_Admin::init();
+ETSS_Slide_Admin::init();
 
 // 停止するときは、このプラグインが付けた目印のページキャッシュを捨てる。LiteSpeed Cache が無くても何も起きない。
 register_deactivation_hook( ETSS_PLUGIN_FILE, array( 'ETSS_Admin', 'on_deactivate' ) );
