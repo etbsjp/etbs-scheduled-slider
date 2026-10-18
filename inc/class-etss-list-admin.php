@@ -349,23 +349,30 @@ class ETSS_List_Admin {
 	}
 
 	/**
-	 * 状態の文言のうち、理由の括弧の中を語句ごとに折り返せないようにする（語句の途中で改行されないため）。
+	 * 状態の文言を、折り返してよい位置（語句の区切り）ごとの span に分ける（語句の途中で改行されないため）。
+	 *
+	 * 区切りは、状態名の後ろ（括弧の前）、理由の「・」の後ろ、「…」の後ろ。「（」「）」「・」「…」は前後どちらかの語句に付けて、行頭に単独で落ちないようにする。
 	 *
 	 * @param string $escaped esc_html 済みの状態の文言（例「下書き（画像不足・リンク先なし）」）。
-	 * @return string 理由を span で囲んだ HTML。括弧が無ければそのまま。
+	 * @return string 語句ごとに span で囲んだ HTML。
 	 */
 	private static function wrap_reasons( $escaped ) {
+		$wrap = static function ( $text ) {
+			return '<span class="etss-status__part">' . $text . '</span>';
+		};
+
 		if ( ! preg_match( '/^(.*?)（(.+)）$/us', $escaped, $m ) ) {
-			return $escaped;
+			return $wrap( $escaped );
 		}
 
-		$parts = preg_split( '/(・|…)/u', $m[2], -1, PREG_SPLIT_DELIM_CAPTURE );
-		$inner = '';
-		foreach ( $parts as $part ) {
-			$inner .= ( '・' === $part || '…' === $part || '' === $part ) ? $part : '<span class="etss-status__reason">' . $part . '</span>';
+		$pieces = preg_split( '/(?<=[・…])/u', $m[2], -1, PREG_SPLIT_NO_EMPTY );
+		$last   = count( $pieces ) - 1;
+		$html   = $wrap( $m[1] );
+		foreach ( $pieces as $i => $piece ) {
+			$html .= $wrap( ( 0 === $i ? '（' : '' ) . $piece . ( $last === $i ? '）' : '' ) );
 		}
 
-		return $m[1] . '（' . $inner . '）';
+		return $html;
 	}
 
 	/**

@@ -1,35 +1,51 @@
 /* ETBS Scheduled Slider: スライドの一覧 */
 
-/* 列の幅 */
+/*
+ * 列の幅。状態の列は最長の語句がぴったり収まる em 幅にして、ほかの列で幅を調整する（状態の語句は途中で折り返さない）。
+ * 全部の列を足した幅に満たない画面では、表の最小幅を保って画面全体を横にスクロールさせる（列どうしを重ねて潰さない）。
+ * 表を包む枠に overflow を付けないのは、枠が手前の float（表示オプションのボタン・絞り込みのリスト）の横に押し込まれて幅が狭まるため。
+ */
+.post-type-etss_slide .wp-list-table {
+	min-width: 890px;
+}
+
 .post-type-etss_slide .wp-list-table .column-etss_thumb {
 	width: 150px;
 }
 
 .post-type-etss_slide .wp-list-table .column-etss_slider {
-	width: 14%;
+	width: 6em;
 }
 
+/* 状態の列：最長の語句（「（表示開始日時が不正・」など 11 字）がぴったり収まる幅。 */
 .post-type-etss_slide .wp-list-table .column-etss_status {
-	width: 16%;
+	width: 11em;
 }
 
-/* 状態の語句が途中で改行されないよう、行頭禁則をブラウザに任せ、理由は語句単位で折り返す（入りきらないときだけ最後の手段で切って、隣の列に重ならないようにする）。 */
+/* 行頭禁則はブラウザに任せ、折り返しは語句の区切りだけにする（語句は nowrap）。 */
 .post-type-etss_slide .wp-list-table td.column-etss_status {
 	line-break: strict;
 }
 
-.etss-status__reason {
-	word-break: keep-all;
-	overflow-wrap: anywhere;
+.etss-status__part {
+	white-space: nowrap;
 }
 
+/* 日時の列：狭い画面では「11/06（金）」と「12:00」の 2 行に分けて幅を詰める。広い画面では 1 行。 */
 .post-type-etss_slide .wp-list-table .column-etss_start,
 .post-type-etss_slide .wp-list-table .column-etss_end {
-	width: 11em;
+	width: 6.5em;
 }
 
 .post-type-etss_slide .wp-list-table .column-etss_order {
 	width: 5em;
+}
+
+@media (min-width: 1280px) {
+	.post-type-etss_slide .wp-list-table .column-etss_start,
+	.post-type-etss_slide .wp-list-table .column-etss_end {
+		width: 9em;
+	}
 }
 
 /* サムネイル */
