@@ -589,6 +589,29 @@ class SlideAdminTest extends TestCase {
 	}
 
 	/**
+	 * 下書き保存で、保存済みの終了に戻すと新しい開始以前になるときは、終了を戻さず外して通知すること。
+	 *
+	 * @return void
+	 */
+	public function test_save_draft_drops_end_that_would_precede_start() {
+		$post              = $this->active_slide();
+		$post->post_status = 'draft';
+		update_post_meta( self::SLIDE_ID, ETSS_Meta::END, 1800000000 );
+		$this->post_from_form(
+			array(
+				'start' => '2030-01-10T00:00',
+				'end'   => 'あした',
+			)
+		);
+
+		ETSS_Slide_Admin::save( self::SLIDE_ID, $post );
+
+		$stored = get_post_meta( self::SLIDE_ID, ETSS_Meta::LAST_ERRORS, true );
+		$this->assertSame( 0, get_post_meta( self::SLIDE_ID, ETSS_Meta::END, true ), '開始以前になる終了は戻さず、外す' );
+		$this->assertStringContainsString( '外しました', $stored['unsaved']['end'] );
+	}
+
+	/**
 	 * 下書き保存で形式が正しくない欄があっても、ほかの正しい欄は保存すること。
 	 *
 	 * @return void

@@ -440,7 +440,9 @@ class ETSS_Slide_Admin {
 		$values = $entry['result']['values'];
 		if ( $entry['unsaved'] ) {
 			// 下書き保存で形式が正しくない欄は、保存済みの値のまま保つ（黙って捨てない）。
-			$values = ETSS_Validator::keep_saved_values( $values, $entry['unsaved'], self::get_saved( $post_id ) );
+			$kept             = ETSS_Validator::keep_saved_values( $values, $entry['unsaved'], self::get_saved( $post_id ) );
+			$values           = $kept['values'];
+			$entry['unsaved'] = $kept['unsaved'];
 		}
 
 		// 値を保存する。空のものは、メタを残さない。
@@ -1094,10 +1096,9 @@ class ETSS_Slide_Admin {
 
 		// 下書き保存で、形式が正しくない欄を保存しなかったとき。エラー（赤）にはせず、保存済みの値のままであることを知らせる。
 		if ( $last['unsaved'] ) {
-			echo '<div class="notice notice-warning etss-notice etss-notice--unsaved" role="status"><p>';
-			echo '<strong>下書きを保存しました。</strong>';
-			echo esc_html( implode( '', $last['unsaved'] ) );
-			echo '</p><p>入力した値は欄に残しています。直して、もう一度保存してください。</p></div>';
+			echo '<div class="notice notice-warning etss-notice etss-notice--unsaved" role="status"><p><strong>下書きを保存しました。</strong>保存していない欄があります。入力した値は欄に残しているので、直して、もう一度保存してください。</p>';
+			self::render_error_list( $last['unsaved'] );
+			echo '</div>';
 		}
 
 		if ( $last['warnings'] ) {

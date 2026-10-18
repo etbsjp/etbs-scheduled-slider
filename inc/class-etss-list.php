@@ -386,7 +386,7 @@ class ETSS_List {
 	/**
 	 * 状態を、理由つきの文言にする。例「下書き（画像不足・リンク先なし）」。
 	 *
-	 * 下書き以外は理由を付けない。下書きで理由が無ければ「下書き（登録前）」（検査には通るが、まだ表示に登録していない）。
+	 * 下書き以外は理由を付けない。下書きで理由が無ければ「下書き（表示に登録前）」（検査には通るが、まだ表示に登録していない）。
 	 *
 	 * @param string   $status  ETSS_Display::STATUS_* のどれか。
 	 * @param string[] $reasons draft_reasons() の結果。
@@ -400,7 +400,7 @@ class ETSS_List {
 		}
 
 		if ( ! $reasons ) {
-			return $label . '（登録前）';
+			return $label . '（表示に登録前）';
 		}
 
 		$shown = array_slice( $reasons, 0, self::REASON_LIMIT );

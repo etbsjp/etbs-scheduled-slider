@@ -486,10 +486,10 @@ class ListTest extends TestCase {
 				'expected'            => '下書き（代替テキストなし・画像不足…ほか1件）',
 			),
 			array(
-				'test_condition_name' => '検査には通るが下書き => 登録前',
+				'test_condition_name' => '検査には通るが下書き => 表示に登録前',
 				'errors'              => array(),
 				'input'               => array(),
-				'expected'            => '下書き（登録前）',
+				'expected'            => '下書き（表示に登録前）',
 			),
 		);
 

@@ -56,6 +56,7 @@ class ETSS_List_Admin {
 		add_filter( 'display_post_states', array( __CLASS__, 'filter_post_states' ), 10, 2 );
 		add_filter( 'disable_months_dropdown', array( __CLASS__, 'disable_months_dropdown' ), 10, 2 );
 		add_action( 'restrict_manage_posts', array( __CLASS__, 'render_slider_filter' ), 10, 2 );
+		add_filter( 'the_posts', array( __CLASS__, 'prime_row_caches' ), 10, 2 );
 		add_action( 'pre_get_posts', array( __CLASS__, 'filter_query' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'render_summary' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
@@ -307,13 +308,13 @@ class ETSS_List_Admin {
 			return;
 		}
 
-		$title = get_the_title( $slider_id );
-		$name  = '' !== trim( $title ) ? $title : '（名前なし）';
-
 		if ( ETSS_Post_Types::SLIDER !== get_post_type( $slider_id ) ) {
 			echo '<span class="etss-muted">見つかりません</span>';
 			return;
 		}
+
+		$title = get_the_title( $slider_id );
+		$name  = '' !== trim( $title ) ? $title : '（名前なし）';
 
 		printf(
 			'<a href="%1$s">%2$s</a>',
@@ -341,7 +342,10 @@ class ETSS_List_Admin {
 			$reasons = ETSS_List::draft_reasons( $result['errors'], $input );
 		}
 
-		echo esc_html( ETSS_List::format_status( $status, $reasons ) );
+		$text = esc_html( ETSS_List::format_status( $status, $reasons ) );
+
+		// 表示中だけ太字にする（色は足さない）。
+		echo ETSS_Display::STATUS_ACTIVE === $status ? '<strong>' . $text . '</strong>' : $text; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_html 済み。
 	}
 
 	/**
@@ -464,11 +468,43 @@ class ETSS_List_Admin {
 
 		// 空の post__in は絞り込みなしと同じ扱いになるので、当てはまるものが無いときは存在しない ID を渡す。
 		$query->set( 'post__in', $ids ? $ids : array( 0 ) );
+		// URL の post_status（WordPress の「公開済み」などの切り替え）は使わず、状態の切り替えで絞った ID に任せる。
 		$query->set( 'post_status', self::POST_STATUSES );
 
 		if ( ! isset( $_GET['orderby'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- 並び順を切り替えるだけで、何も変更しない。
 			$query->set( 'orderby', 'post__in' );
 		}
+	}
+
+	/**
+	 * 一覧に出す行が使う投稿（サムネイルの添付ファイル・スライダー）を、まとめて読み込む（行ごとの問い合わせを減らすため）。
+	 *
+	 * @param WP_Post[] $posts 一覧に出す投稿。
+	 * @param WP_Query  $query クエリ。
+	 * @return WP_Post[] 投稿（そのまま返す）。
+	 */
+	public static function prime_row_caches( $posts, $query ) {
+		if ( ! is_admin() || ! $query->is_main_query() || ETSS_Post_Types::SLIDE !== $query->get( 'post_type' ) || ! self::is_slide_list_screen() ) {
+			return $posts;
+		}
+
+		$ids = array();
+		foreach ( $posts as $post ) {
+			$saved = ETSS_Slide_Admin::get_saved( $post->ID );
+			if ( $saved['slider_id'] > 0 ) {
+				$ids[] = $saved['slider_id'];
+			}
+			foreach ( $saved['images'] as $attachment_id ) {
+				$ids[] = (int) $attachment_id;
+			}
+		}
+
+		$ids = array_values( array_unique( array_filter( $ids ) ) );
+		if ( $ids ) {
+			_prime_post_caches( $ids, false, true );
+		}
+
+		return $posts;
 	}
 
 	/**
@@ -495,10 +531,17 @@ class ETSS_List_Admin {
 
 		$summaries = '';
 		$warnings  = '';
+		$has_draft = false;
 		foreach ( $sliders as $slider_id => $name ) {
 			$rows       = isset( $by_slide[ $slider_id ] ) ? $by_slide[ $slider_id ] : array();
 			$summaries .= self::summary_row_html( $slider_id, $name, $rows, $now, $timezone );
 			$warnings  .= self::warning_items_html( $slider_id, $name, $rows, $now, $timezone );
+			$has_draft  = $has_draft || (bool) ETSS_List::drafts_with_start( $rows, $now );
+		}
+
+		// 下書きの警告の説明は、警告のまとまりの先頭に1回だけ出す。
+		if ( $has_draft ) {
+			$warnings = '<li class="etss-summary__row"><span class="etss-summary__text">下書きのスライドは、編集画面で「表示に登録」を押すと、表示開始日時から表示されます。</span></li>' . $warnings;
 		}
 
 		echo '<div class="notice etss-summary"><ul class="etss-summary__list">' . $summaries . '</ul></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 各行はエスケープ済みの HTML。
@@ -559,7 +602,7 @@ class ETSS_List_Admin {
 		// これから 0 枚になる時間帯。
 		foreach ( ETSS_List::zero_windows( $rows, $now ) as $window ) {
 			$html .= '<li class="etss-summary__row"><span class="etss-summary__text"><strong>' . esc_html( $name ) . '</strong>: ' . esc_html( ETSS_List::describe_zero_window( $window, $now, $timezone ) ) . '</span>';
-			$html .= ' <a href="' . esc_url( admin_url( 'post-new.php?post_type=' . ETSS_Post_Types::SLIDE . '&' . self::SLIDER_ARG . '=' . (int) $slider_id ) ) . '">スライドを追加</a></li>';
+			$html .= ' <a href="' . esc_url( admin_url( 'post-new.php?post_type=' . ETSS_Post_Types::SLIDE . '&' . self::SLIDER_ARG . '=' . (int) $slider_id ) ) . '" aria-label="' . esc_attr( $name . 'にスライドを追加' ) . '">スライドを追加</a></li>';
 		}
 
 		// 表示開始日時があるのに下書きのもの（表示に登録し忘れている疑い）。
@@ -567,9 +610,13 @@ class ETSS_List_Admin {
 		if ( $drafts ) {
 			$links = array();
 			foreach ( array_slice( $drafts, 0, 3 ) as $row ) {
+				$edit_link = (string) get_edit_post_link( $row['id'], 'raw' );
+				if ( '' === $edit_link ) {
+					continue;
+				}
 				$links[] = sprintf(
-					'<a href="%1$s">%2$s</a>（%3$s）',
-					esc_url( get_edit_post_link( $row['id'], 'raw' ) ),
+					'<a href="%1$s">%2$s（表示開始 %3$s）</a>',
+					esc_url( $edit_link ),
 					esc_html( ETSS_List::shorten_title( $row['title'] ) ),
 					esc_html( ETSS_Display::format_list_datetime( $row['start'], $now, $timezone ) )
 				);
@@ -577,7 +624,6 @@ class ETSS_List_Admin {
 			$more = count( $drafts ) - count( $links );
 
 			$html .= '<li class="etss-summary__row"><span class="etss-summary__text"><strong>' . esc_html( $name ) . '</strong>: 表示開始日時が入っているのに、下書きのため表示されないスライドが ' . count( $drafts ) . ' 枚あります。';
-			$html .= ' 編集画面で「表示に登録」を押すと、表示開始日時から表示されます。';
 			$html .= ' ' . implode( '、', $links ) . ( $more > 0 ? ' ほか' . $more . '枚' : '' ) . '</span></li>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $links は上でエスケープ済み。
 		}
 

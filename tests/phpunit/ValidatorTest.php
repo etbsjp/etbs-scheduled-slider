@@ -572,7 +572,7 @@ class ValidatorTest extends TestCase {
 			array(
 				'test_condition_name' => 'リンク先が example.com => リンク先を保存しない',
 				'input'               => array( 'url' => 'example.com' ),
-				'expected'            => array( 'url' => 'リンク先は形式が正しくないため保存していません。' ),
+				'expected'            => array( 'url' => 'リンク先は形式が正しくないため、前に保存した値のままです。「/」か「https://」で始まる形で入力してください。' ),
 			),
 			array(
 				'test_condition_name' => 'リンク先が空 => 空にしたいだけなので対象外（必須のエラーにはなる）',
@@ -582,22 +582,22 @@ class ValidatorTest extends TestCase {
 			array(
 				'test_condition_name' => '表示開始日時が日時でない',
 				'input'               => array( 'start' => '2026-02-30T10:00' ),
-				'expected'            => array( 'start' => '表示開始日時は形式が正しくないため保存していません。' ),
+				'expected'            => array( 'start' => '表示開始日時は形式が正しくないため、前に保存した値のままです。日時を選び直してください。' ),
 			),
 			array(
 				'test_condition_name' => '表示終了日時が日時でない',
 				'input'               => array( 'end' => 'あした' ),
-				'expected'            => array( 'end' => '表示終了日時は形式が正しくないため保存していません。' ),
+				'expected'            => array( 'end' => '表示終了日時は形式が正しくないため、前に保存した値のままです。日時を選び直すか、空にしてください。' ),
 			),
 			array(
 				'test_condition_name' => '表示終了日時が表示開始日時以前',
 				'input'               => array( 'end' => '2026-11-06T12:00' ),
-				'expected'            => array( 'end' => '表示終了日時は表示開始日時より後ではないため保存していません。' ),
+				'expected'            => array( 'end' => '表示終了日時は表示開始日時より後ではないため、前に保存した値のままです。表示開始日時より後の日時を入力してください。' ),
 			),
 			array(
 				'test_condition_name' => '存在しない画像',
 				'input'               => array( 'images' => array( 'wide' => 999 ) ),
-				'expected'            => array( 'image-wide' => '横長の画像は見つからないため保存していません。' ),
+				'expected'            => array( 'image-wide' => '横長の画像は見つからないため、前に保存した画像のままです。選び直してください。' ),
 			),
 			array(
 				'test_condition_name' => '同じ画像を 2 つの枠に入れた => 2 つ目の枠を保存しない',
@@ -607,7 +607,7 @@ class ValidatorTest extends TestCase {
 						'tall' => 10,
 					),
 				),
-				'expected'            => array( 'image-tall' => '縦長の画像は、「横長」と同じ画像のため保存していません。' ),
+				'expected'            => array( 'image-tall' => '縦長の画像は、「横長」と同じ画像のため、前に保存した画像のままです。別の画像を選んでください。' ),
 			),
 			array(
 				'test_condition_name' => '必須の画像が空 => 外したいだけなので対象外',
@@ -682,11 +682,33 @@ class ValidatorTest extends TestCase {
 		);
 
 		foreach ( $test_cases as $case ) {
-			$this->assertSame( $case['expected'], ETSS_Validator::keep_saved_values( $values, $case['unsaved'], $saved ), $case['test_condition_name'] );
+			$kept = ETSS_Validator::keep_saved_values( $values, $case['unsaved'], $saved );
+			$this->assertSame( $case['expected'], $kept['values'], $case['test_condition_name'] );
+			$this->assertSame( $case['unsaved'], $kept['unsaved'], $case['test_condition_name'] . '（通知はそのまま）' );
 		}
+
+		// 終了だけ保存済みに戻すと終了が開始以前になるときは、終了を戻さず外し、通知を差し替える。
+		$dropped = array(
+			'表示開始日時だけ新しく、終了の入力が形式不正 => 保存済みの終了が開始以前になるので外す' => array(
+				array_merge( $values, array( 'start' => 500 ) ),
+				array( 'end' => 'x' ),
+			),
+			'開始が形式不正で、入力した終了が保存済みの開始以前 => 入力した終了を外す' => array(
+				array_merge( $values, array( 'end' => 50 ) ),
+				array( 'start' => 'x' ),
+			),
+		);
+		foreach ( $dropped as $name => $case ) {
+			$kept = ETSS_Validator::keep_saved_values( $case[0], $case[1], $saved );
+			$this->assertSame( 0, $kept['values']['end'], $name );
+			$this->assertStringContainsString( '外しました', $kept['unsaved']['end'], $name . '（通知）' );
+		}
+
+		$kept = ETSS_Validator::keep_saved_values( array_merge( $values, array( 'start' => 150 ) ), array( 'end' => 'x' ), $saved );
+		$this->assertSame( 200, $kept['values']['end'], '戻した終了が開始より後なら、そのまま戻す' );
 
 		// 保存済みの値が無い（新規）ときは、空・0 に戻る。
 		$kept = ETSS_Validator::keep_saved_values( array_merge( $values, array( 'url' => '/x/' ) ), array( 'url' => 'x' ), array() );
-		$this->assertSame( '', $kept['url'], '保存済みが無ければ空' );
+		$this->assertSame( '', $kept['values']['url'], '保存済みが無ければ空' );
 	}
 }

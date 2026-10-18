@@ -151,7 +151,7 @@ class ETSS_Validator {
 			$errors['url'] = 'リンク先を入力してください。';
 		} elseif ( ! ETSS_Link::is_valid( $url ) ) {
 			$errors['url']  = 'リンク先の形式が正しくありません。「/」で始まるサイト内のパスか、「http://」「https://」で始まる URL を入力してください。';
-			$unsaved['url'] = 'リンク先は形式が正しくないため保存していません。';
+			$unsaved['url'] = 'リンク先は形式が正しくないため、前に保存した値のままです。「/」か「https://」で始まる形で入力してください。';
 		}
 
 		// 表示開始・表示終了。
@@ -165,7 +165,7 @@ class ETSS_Validator {
 			$parsed = ETSS_Schedule::parse_datetime_local( $input['start'], $timezone );
 			if ( null === $parsed ) {
 				$errors['start']  = '表示開始日時の形式が正しくありません。';
-				$unsaved['start'] = '表示開始日時は形式が正しくないため保存していません。';
+				$unsaved['start'] = '表示開始日時は形式が正しくないため、前に保存した値のままです。日時を選び直してください。';
 			} else {
 				$start = $parsed;
 			}
@@ -175,10 +175,10 @@ class ETSS_Validator {
 			$parsed = ETSS_Schedule::parse_datetime_local( $input['end'], $timezone );
 			if ( null === $parsed ) {
 				$errors['end']  = '表示終了日時の形式が正しくありません。';
-				$unsaved['end'] = '表示終了日時は形式が正しくないため保存していません。';
+				$unsaved['end'] = '表示終了日時は形式が正しくないため、前に保存した値のままです。日時を選び直すか、空にしてください。';
 			} elseif ( $start > 0 && $parsed <= $start ) {
 				$errors['end']  = '表示終了日時は、表示開始日時より後にしてください。';
-				$unsaved['end'] = '表示終了日時は表示開始日時より後ではないため保存していません。';
+				$unsaved['end'] = '表示終了日時は表示開始日時より後ではないため、前に保存した値のままです。表示開始日時より後の日時を入力してください。';
 			} else {
 				$end = $parsed;
 			}
@@ -207,7 +207,7 @@ class ETSS_Validator {
 	 * @param array $values  validate_slide() の `values`。
 	 * @param array $unsaved validate_slide() の `unsaved`（欄のキー => 通知の文）。
 	 * @param array $saved   保存済みの値。`slider_id`・`images`・`url`・`start`・`end`。
-	 * @return array 保存する値（`values` と同じ形）。
+	 * @return array `values`（保存する値。validate_slide() の `values` と同じ形）・`unsaved`（通知の文。表示終了を外したときは、その文に差し替える）。
 	 */
 	public static function keep_saved_values( array $values, array $unsaved, array $saved ) {
 		if ( isset( $unsaved['url'] ) ) {
@@ -234,7 +234,16 @@ class ETSS_Validator {
 			}
 		}
 
-		return $values;
+		// 開始か終了だけを保存済みに戻した結果、終了が開始以前になるときは、終了を戻さず外す（食い違った期間を保存しない）。
+		if ( ( isset( $unsaved['start'] ) || isset( $unsaved['end'] ) ) && $values['start'] > 0 && $values['end'] > 0 && $values['end'] <= $values['start'] ) {
+			$values['end']  = 0;
+			$unsaved['end'] = '表示終了日時は、表示開始日時より前になるため外しました。表示開始日時より後の日時を入力してください。';
+		}
+
+		return array(
+			'values'  => $values,
+			'unsaved' => $unsaved,
+		);
 	}
 
 	/**
@@ -266,14 +275,14 @@ class ETSS_Validator {
 			$info = call_user_func( $context['attachment_info'], $attachment_id );
 			if ( ! is_array( $info ) ) {
 				$errors[ $key ]  = $slot['label'] . 'の画像が見つかりません。選び直してください。';
-				$unsaved[ $key ] = $slot['label'] . 'の画像は見つからないため保存していません。';
+				$unsaved[ $key ] = $slot['label'] . 'の画像は見つからないため、前に保存した画像のままです。選び直してください。';
 				continue;
 			}
 
 			// 同じ添付ファイルを別の枠にも入れていないか。
 			if ( isset( $used[ $attachment_id ] ) ) {
 				$errors[ $key ]  = $slot['label'] . 'に、「' . $used[ $attachment_id ] . '」と同じ画像が選ばれています。別の画像にしてください。';
-				$unsaved[ $key ] = $slot['label'] . 'の画像は、「' . $used[ $attachment_id ] . '」と同じ画像のため保存していません。';
+				$unsaved[ $key ] = $slot['label'] . 'の画像は、「' . $used[ $attachment_id ] . '」と同じ画像のため、前に保存した画像のままです。別の画像を選んでください。';
 				continue;
 			}
 			$used[ $attachment_id ] = $slot['label'];
