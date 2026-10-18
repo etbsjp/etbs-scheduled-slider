@@ -332,6 +332,11 @@ class ScheduleTest extends TestCase {
 				'expected'            => null,
 			),
 			array(
+				'test_condition_name' => '夏時間の秋の重複時刻（NY 2026-11-01T01:30 は2回ある） => 先の方（EDT = UTC 05:30）',
+				'input'               => array( '2026-11-01T01:30', $new_york ),
+				'expected'            => 1793511000,
+			),
+			array(
 				'test_condition_name' => '夏時間の直後（NY 2026-03-08T03:30） => 通す',
 				'input'               => array( '2026-03-08T03:30', $new_york ),
 				'expected'            => 1772955000,

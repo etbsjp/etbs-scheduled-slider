@@ -88,6 +88,38 @@ class LoopTest extends TestCase {
 				'expected'            => 2,
 			),
 			array(
+				'test_condition_name' => '巨大な値（1e9） => 上限 20 で打ち切り 20 + 20 = 40',
+				'input'               => array(
+					'slidesPerViewPC' => 1e9,
+					'slidesPerGroup'  => 'slides-per-view',
+				),
+				'expected'            => 40,
+			),
+			array(
+				'test_condition_name' => '文字列の 1e999（INF） => 1 枚見せ扱い => 2',
+				'input'               => array(
+					'slidesPerViewPC' => '1e999',
+					'slidesPerGroup'  => 'one-by-one',
+				),
+				'expected'            => 2,
+			),
+			array(
+				'test_condition_name' => 'NAN => 1 枚見せ扱い => 2',
+				'input'               => array(
+					'slidesPerViewPC' => NAN,
+					'slidesPerGroup'  => 'one-by-one',
+				),
+				'expected'            => 2,
+			),
+			array(
+				'test_condition_name' => '負の値 => 1 枚見せ扱い => 2',
+				'input'               => array(
+					'slidesPerViewPC' => -3,
+					'slidesPerGroup'  => 'one-by-one',
+				),
+				'expected'            => 2,
+			),
+			array(
 				'test_condition_name' => '設定が空 => 2',
 				'input'               => array(),
 				'expected'            => 2,
@@ -150,6 +182,11 @@ class LoopTest extends TestCase {
 				'test_condition_name' => '2枚・ループ無効 => そのまま',
 				'input'               => array( array( 'a', 'b' ), array_merge( $centered, array( 'loop' => false ) ) ),
 				'expected'            => array( 'a', 'b' ),
+			),
+			array(
+				'test_condition_name' => '2枚・巨大な値（1e9）でも要る枚数は 21 で収まる => 11回 = 22枚',
+				'input'               => array( array( 'a', 'b' ), array_merge( $default, array( 'slidesPerViewPC' => 1e9 ) ) ),
+				'expected'            => array_merge( ...array_fill( 0, 11, array( 'a', 'b' ) ) ),
 			),
 			array(
 				'test_condition_name' => '添付の添字が飛んでいても振り直す',

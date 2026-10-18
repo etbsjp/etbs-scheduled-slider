@@ -177,6 +177,8 @@ class ETSS_Templates {
 	 * 検査する項目: ID の形・label・slots（1つ以上・枠 ID の形と重複・枠の label）・
 	 * render_item と import_item が呼び出せること・default_options のキーが既知であること・item_class の文字。
 	 *
+	 * default_options は、キー名だけを検査する。値の型・範囲の検査は、#2 の保存時の sanitize に任せる。
+	 *
 	 * @param mixed $id   ひな形の ID。
 	 * @param mixed $args 定義。
 	 * @return array `template`（整形済みの定義。エラーがあれば null）と `errors`（日本語のエラー文の配列）。

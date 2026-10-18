@@ -19,11 +19,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 class ETSS_Loop {
 
 	/**
+	 * 一度に見せる枚数として受け付ける上限。これを超える値は打ち切る。
+	 * 巨大な値（1e9 など）で、繰り返しの枚数が膨らんでメモリを使い果たすのを防ぐ。
+	 */
+	const MAX_PER_VIEW = 20.0;
+
+	/**
 	 * ループに要る枚数を求める。
 	 *
 	 * 要る枚数 ＝ ceil( 最大の slidesPerView ) ＋（centeredSlides で、その値が偶数なら 1）＋ slidesPerGroup。
 	 * slidesPerGroup は one-by-one なら 1、それ以外（slides-per-view）は一度に見せる枚数と同じ。
 	 * 例: 1.3 枚見せ・中央寄せ・one-by-one → 2 ＋ 1 ＋ 1 ＝ 4。
+	 *
+	 * 見せる枚数は MAX_PER_VIEW（20）で打ち切り、0 以下・NaN・INF・非数値は 1 として扱う。
 	 *
 	 * @param array $options 動きの設定（slidesPerViewMobile / Tablet / PC・centeredSlides・slidesPerGroup）。
 	 * @return int 要る枚数（1 以上）。
@@ -33,7 +41,13 @@ class ETSS_Loop {
 		$max_per_view = 1.0;
 		foreach ( array( 'slidesPerViewMobile', 'slidesPerViewTablet', 'slidesPerViewPC' ) as $key ) {
 			if ( isset( $options[ $key ] ) && is_numeric( $options[ $key ] ) ) {
-				$max_per_view = max( $max_per_view, (float) $options[ $key ] );
+				$value = (float) $options[ $key ];
+
+				// NaN・無限大・0 以下は 1 枚見せに戻し、大きすぎる値は上限で打ち切る。
+				if ( is_nan( $value ) || is_infinite( $value ) || $value <= 0 ) {
+					$value = 1.0;
+				}
+				$max_per_view = max( $max_per_view, min( $value, self::MAX_PER_VIEW ) );
 			}
 		}
 
