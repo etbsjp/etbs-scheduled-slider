@@ -91,12 +91,13 @@ function esc_html( $text ) {
  * @return void
  */
 function etss_test_reset_wp() {
-	$GLOBALS['etss_test_meta']   = array();
-	$GLOBALS['etss_test_posts']  = array();
-	$GLOBALS['etss_test_attach'] = array();
-	$GLOBALS['etss_test_can']    = true;
-	$_POST                       = array();
-	$_GET                        = array();
+	$GLOBALS['etss_test_meta']     = array();
+	$GLOBALS['etss_test_posts']    = array();
+	$GLOBALS['etss_test_attach']   = array();
+	$GLOBALS['etss_test_can']      = true;
+	$GLOBALS['etss_test_autosave'] = false;
+	$_POST                         = array();
+	$_GET                          = array();
 }
 
 /**
@@ -116,7 +117,7 @@ function get_post_meta( $post_id, $key, $single = false ) {
 }
 
 /**
- * update_post_meta() の最小スタブ。
+ * update_post_meta() の最小スタブ。値の slash を外して保存する。
  *
  * @param int    $post_id 投稿 ID。
  * @param string $key     キー。
@@ -124,7 +125,8 @@ function get_post_meta( $post_id, $key, $single = false ) {
  * @return bool
  */
 function update_post_meta( $post_id, $key, $value ) {
-	$GLOBALS['etss_test_meta'][ $post_id ][ $key ] = array( $value );
+	// 本物の update_post_meta() と同じく、値の slash を外して保存する（呼び出し側が wp_slash() を通し忘れると、値が欠ける）。
+	$GLOBALS['etss_test_meta'][ $post_id ][ $key ] = array( wp_unslash( $value ) );
 	return true;
 }
 
@@ -202,22 +204,30 @@ function sanitize_text_field( $text ) {
 }
 
 /**
- * wp_unslash() のスタブ（テストの値にスラッシュは入れない）。
+ * wp_unslash() のスタブ（文字列と配列の slash を外す）。
  *
  * @param mixed $value 値。
  * @return mixed
  */
 function wp_unslash( $value ) {
-	return $value;
+	if ( is_array( $value ) ) {
+		return array_map( 'wp_unslash', $value );
+	}
+
+	return is_string( $value ) ? stripslashes( $value ) : $value;
 }
 
 /**
- * wp_slash() のスタブ（文字列だけ addslashes() する）。
+ * wp_slash() のスタブ（文字列と配列に addslashes() する）。
  *
  * @param mixed $value 値。
  * @return mixed
  */
 function wp_slash( $value ) {
+	if ( is_array( $value ) ) {
+		return array_map( 'wp_slash', $value );
+	}
+
 	return is_string( $value ) ? addslashes( $value ) : $value;
 }
 
@@ -227,7 +237,7 @@ function wp_slash( $value ) {
  * @return bool
  */
 function wp_is_post_autosave() {
-	return false;
+	return ! empty( $GLOBALS['etss_test_autosave'] );
 }
 
 /**
@@ -237,6 +247,43 @@ function wp_is_post_autosave() {
  */
 function wp_is_post_revision() {
 	return false;
+}
+
+/**
+ * add_query_arg() のスタブ（`add_query_arg( キー, 値, URL )` の形だけ）。
+ *
+ * @param string $key   引数名。
+ * @param string $value 値。
+ * @param string $url   URL。
+ * @return string
+ */
+function add_query_arg( $key, $value, $url ) {
+	$parts = explode( '?', $url, 2 );
+	$query = array();
+	if ( isset( $parts[1] ) ) {
+		parse_str( $parts[1], $query );
+	}
+	$query[ $key ] = $value;
+
+	return $parts[0] . '?' . http_build_query( $query );
+}
+
+/**
+ * remove_query_arg() のスタブ（`remove_query_arg( キー, URL )` の形だけ）。
+ *
+ * @param string $key 引数名。
+ * @param string $url URL。
+ * @return string
+ */
+function remove_query_arg( $key, $url ) {
+	$parts = explode( '?', $url, 2 );
+	$query = array();
+	if ( isset( $parts[1] ) ) {
+		parse_str( $parts[1], $query );
+	}
+	unset( $query[ $key ] );
+
+	return $parts[0] . ( $query ? '?' . http_build_query( $query ) : '' );
 }
 
 /**
@@ -289,6 +336,7 @@ require_once dirname( __DIR__, 2 ) . '/inc/class-etss-templates.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-cache.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-validator.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-display.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-list.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-options.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slider-admin.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slide-admin.php';

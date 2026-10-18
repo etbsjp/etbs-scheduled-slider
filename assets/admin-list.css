@@ -1,0 +1,135 @@
+/* ETBS Scheduled Slider: スライドの一覧 */
+
+/*
+ * 列の幅。状態の列は最長の語句がぴったり収まる em 幅にして、ほかの列で幅を調整する（状態の語句は途中で折り返さない）。
+ * 全部の列を足した幅に満たない画面では、表の最小幅を保って画面全体を横にスクロールさせる（列どうしを重ねて潰さない）。
+ * 表を包む枠に overflow を付けないのは、枠が手前の float（表示オプションのボタン・絞り込みのリスト）の横に押し込まれて幅が狭まるため。
+ * 文字を拡大すると列の合計がもっと広がり、横スクロールになるだけで重なりは起きない。
+ * 782px 以下は WP 標準の縮小表示（非主要の列を隠す）なので、最小幅は付けない。
+ */
+@media (min-width: 783px) {
+	.post-type-etss_slide .wp-list-table {
+		min-width: 890px;
+	}
+}
+
+.post-type-etss_slide .wp-list-table .column-etss_thumb {
+	width: 150px;
+}
+
+.post-type-etss_slide .wp-list-table .column-etss_slider {
+	width: 6em;
+}
+
+/* 状態の列：最長の語句（「（表示開始日時が不正・」など 11 字）がぴったり収まる幅。 */
+.post-type-etss_slide .wp-list-table .column-etss_status {
+	width: 11em;
+}
+
+/* 行頭禁則はブラウザに任せ、折り返しは語句の区切りだけにする（語句は nowrap）。 */
+.post-type-etss_slide .wp-list-table td.column-etss_status {
+	line-break: strict;
+}
+
+.etss-status__part {
+	white-space: nowrap;
+}
+
+/* 日時の列：狭い画面では「11/06（金）」と「12:00」の 2 行に分けて幅を詰める。広い画面では 1 行。 */
+.post-type-etss_slide .wp-list-table .column-etss_start,
+.post-type-etss_slide .wp-list-table .column-etss_end {
+	width: 6.5em;
+}
+
+.post-type-etss_slide .wp-list-table .column-etss_order {
+	width: 5em;
+}
+
+@media (min-width: 1280px) {
+	.post-type-etss_slide .wp-list-table .column-etss_start,
+	.post-type-etss_slide .wp-list-table .column-etss_end {
+		width: 9em;
+	}
+}
+
+/* サムネイル */
+.etss-thumbs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.etss-thumbs__item {
+	margin: 0;
+	line-height: 1.4;
+}
+
+.etss-thumbs__item img {
+	display: block;
+	width: auto;
+	max-width: 96px;
+	height: auto;
+	max-height: 48px;
+	border: 1px solid #c3c4c7;
+}
+
+/* 足りない枠は、画像と見分けられるよう文字で出す。必須の枠だけ警告の色にする。 */
+.etss-thumbs__missing {
+	color: #b32d2e;
+	font-weight: 600;
+}
+
+.etss-thumbs__empty,
+.etss-muted {
+	color: #50575e;
+}
+
+/* 表示開始の下の残り日数 */
+.etss-remaining {
+	display: block;
+	color: #50575e;
+}
+
+/* 一覧の上の要約と警告 */
+.etss-summary.notice,
+.etss-summary-warnings.notice {
+	padding: 0;
+}
+
+.etss-summary__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* 行どうしの間隔は、1行の中の要素どうしの間隔より広くする。 */
+.etss-summary__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 12px;
+	align-items: baseline;
+	margin: 0;
+	padding: 10px 12px;
+	line-height: 1.5;
+}
+
+.etss-summary__row + .etss-summary__row {
+	border-top: 1px solid #dcdcde;
+}
+
+.etss-summary__name {
+	font-weight: 600;
+}
+
+.etss-summary__actions {
+	flex-basis: 100%;
+}
+
+@media (min-width: 783px) {
+	.etss-summary__actions {
+		flex-basis: auto;
+	}
+}

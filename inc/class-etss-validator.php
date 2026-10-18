@@ -118,11 +118,13 @@ class ETSS_Validator {
 	 * @param array  $input   normalize_input() の結果。
 	 * @param array  $context 検査に使う外の情報。
 	 * @return array `errors`（欄のキー => エラー文。検査した順＝画面の上から下の順）・`warnings`（欄のキー => 警告文）・
-	 *               `values`（保存する値。`slider_id`・`images`・`url`・`start`・`end`）。
+	 *               `values`（保存する値。`slider_id`・`images`・`url`・`start`・`end`）・
+	 *               `unsaved`（下書き保存のときに、保存済みの値のまま保つ欄。欄のキー => 通知に出す文。リンク先・表示開始・表示終了・画像枠のうち、入力があるのに使えなかったもの）。
 	 */
 	public static function validate_slide( $title, array $input, array $context ) {
 		$errors   = array();
 		$warnings = array();
+		$unsaved  = array();
 		$template = isset( $context['template'] ) ? $context['template'] : null;
 
 		// 代替テキスト（タイトル）。
@@ -141,14 +143,15 @@ class ETSS_Validator {
 		}
 
 		// ひな形の画像枠。
-		$images = self::validate_images( $input['images'], null === $template ? array() : $template['slots'], $context, $errors, $warnings );
+		$images = self::validate_images( $input['images'], null === $template ? array() : $template['slots'], $context, $errors, $warnings, $unsaved );
 
 		// リンク先。
 		$url = $input['url'];
 		if ( '' === $url ) {
 			$errors['url'] = 'リンク先を入力してください。';
 		} elseif ( ! ETSS_Link::is_valid( $url ) ) {
-			$errors['url'] = 'リンク先の形式が正しくありません。「/」で始まるサイト内のパスか、「http://」「https://」で始まる URL を入力してください。';
+			$errors['url']  = 'リンク先の形式が正しくありません。「/」で始まるサイト内のパスか、「http://」「https://」で始まる URL を入力してください。';
+			$unsaved['url'] = 'リンク先は形式が正しくないため、前に保存した値のままです。「/」か「https://」で始まる形で入力してください。';
 		}
 
 		// 表示開始・表示終了。
@@ -161,7 +164,8 @@ class ETSS_Validator {
 		} else {
 			$parsed = ETSS_Schedule::parse_datetime_local( $input['start'], $timezone );
 			if ( null === $parsed ) {
-				$errors['start'] = '表示開始日時の形式が正しくありません。';
+				$errors['start']  = '表示開始日時の形式が正しくありません。';
+				$unsaved['start'] = '表示開始日時は形式が正しくないため、前に保存した値のままです。日時を選び直してください。';
 			} else {
 				$start = $parsed;
 			}
@@ -170,9 +174,11 @@ class ETSS_Validator {
 		if ( '' !== $input['end'] ) {
 			$parsed = ETSS_Schedule::parse_datetime_local( $input['end'], $timezone );
 			if ( null === $parsed ) {
-				$errors['end'] = '表示終了日時の形式が正しくありません。';
+				$errors['end']  = '表示終了日時の形式が正しくありません。';
+				$unsaved['end'] = '表示終了日時は形式が正しくないため、前に保存した値のままです。日時を選び直すか、空にしてください。';
 			} elseif ( $start > 0 && $parsed <= $start ) {
-				$errors['end'] = '表示終了日時は、表示開始日時より後にしてください。';
+				$errors['end']  = '表示終了日時は、表示開始日時より後にしてください。';
+				$unsaved['end'] = '表示終了日時は表示開始日時より後ではないため、前に保存した値のままです。表示開始日時より後の日時を入力してください。';
 			} else {
 				$end = $parsed;
 			}
@@ -188,6 +194,55 @@ class ETSS_Validator {
 				'start'     => $start,
 				'end'       => $end,
 			),
+			'unsaved'  => $unsaved,
+		);
+	}
+
+	/**
+	 * 下書き保存のとき、使えなかった欄を保存済みの値のまま保つように、保存する値を直す。
+	 *
+	 * 形式が正しくない入力を黙って捨てて、保存済みの値まで失わないようにするため（`unsaved` の欄が対象）。
+	 * 入力が空の欄（消したい）は `unsaved` に入らないので、そのまま消える。
+	 *
+	 * @param array $values  validate_slide() の `values`。
+	 * @param array $unsaved validate_slide() の `unsaved`（欄のキー => 通知の文）。
+	 * @param array $saved   保存済みの値。`slider_id`・`images`・`url`・`start`・`end`。
+	 * @return array `values`（保存する値。validate_slide() の `values` と同じ形）・`unsaved`（通知の文。表示終了を外したときは、その文に差し替える）。
+	 */
+	public static function keep_saved_values( array $values, array $unsaved, array $saved ) {
+		if ( isset( $unsaved['url'] ) ) {
+			$values['url'] = isset( $saved['url'] ) && is_string( $saved['url'] ) ? $saved['url'] : '';
+		}
+		if ( isset( $unsaved['start'] ) ) {
+			$values['start'] = isset( $saved['start'] ) ? (int) $saved['start'] : 0;
+		}
+		if ( isset( $unsaved['end'] ) ) {
+			$values['end'] = isset( $saved['end'] ) ? (int) $saved['end'] : 0;
+		}
+
+		// 画像枠は、使えなかった枠だけを保存済みの画像に戻す。
+		$saved_images = ( isset( $saved['images'] ) && is_array( $saved['images'] ) ) ? $saved['images'] : array();
+		foreach ( $unsaved as $key => $message ) {
+			if ( 0 !== strpos( (string) $key, 'image-' ) ) {
+				continue;
+			}
+			$slot_id = substr( (string) $key, strlen( 'image-' ) );
+			if ( isset( $saved_images[ $slot_id ] ) ) {
+				$values['images'][ $slot_id ] = $saved_images[ $slot_id ];
+			} else {
+				unset( $values['images'][ $slot_id ] );
+			}
+		}
+
+		// 開始か終了だけを保存済みに戻した結果、終了が開始以前になるときは、終了を戻さず外す（食い違った期間を保存しない）。
+		if ( ( isset( $unsaved['start'] ) || isset( $unsaved['end'] ) ) && $values['start'] > 0 && $values['end'] > 0 && $values['end'] <= $values['start'] ) {
+			$values['end']  = 0;
+			$unsaved['end'] = '表示終了日時は、表示開始日時より前になるため外しました。表示開始日時より後の日時を入力してください。';
+		}
+
+		return array(
+			'values'  => $values,
+			'unsaved' => $unsaved,
 		);
 	}
 
@@ -199,9 +254,10 @@ class ETSS_Validator {
 	 * @param array $context validate_slide() の `$context`。
 	 * @param array $errors  エラー（参照渡しで追記する）。
 	 * @param array $warnings 警告（参照渡しで追記する）。
+	 * @param array $unsaved  下書き保存のときに保存済みの値のまま保つ欄（参照渡しで追記する）。
 	 * @return array 保存する画像（枠 ID => 添付ファイル ID）。有効なものだけ。
 	 */
-	private static function validate_images( array $posted, array $slots, array $context, array &$errors, array &$warnings ) {
+	private static function validate_images( array $posted, array $slots, array $context, array &$errors, array &$warnings, array &$unsaved ) {
 		$images = array();
 		$used   = array();
 
@@ -218,13 +274,15 @@ class ETSS_Validator {
 
 			$info = call_user_func( $context['attachment_info'], $attachment_id );
 			if ( ! is_array( $info ) ) {
-				$errors[ $key ] = $slot['label'] . 'の画像が見つかりません。選び直してください。';
+				$errors[ $key ]  = $slot['label'] . 'の画像が見つかりません。選び直してください。';
+				$unsaved[ $key ] = $slot['label'] . 'の画像は見つからないため、前に保存した画像のままです。選び直してください。';
 				continue;
 			}
 
 			// 同じ添付ファイルを別の枠にも入れていないか。
 			if ( isset( $used[ $attachment_id ] ) ) {
-				$errors[ $key ] = $slot['label'] . 'に、「' . $used[ $attachment_id ] . '」と同じ画像が選ばれています。別の画像にしてください。';
+				$errors[ $key ]  = $slot['label'] . 'に、「' . $used[ $attachment_id ] . '」と同じ画像が選ばれています。別の画像にしてください。';
+				$unsaved[ $key ] = $slot['label'] . 'の画像は、「' . $used[ $attachment_id ] . '」と同じ画像のため、前に保存した画像のままです。別の画像を選んでください。';
 				continue;
 			}
 			$used[ $attachment_id ] = $slot['label'];
