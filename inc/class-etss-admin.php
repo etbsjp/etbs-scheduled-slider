@@ -1,6 +1,6 @@
 <?php
 /**
- * 管理画面のうち、メニューの補い（スライダーの追加）とプラグイン一覧の行の処理。
+ * 管理画面のうち、メニューの補い（スライダーの追加）・プラグイン一覧の行の処理・アセットの版数。
  *
  * メニュー「スライダー」と2つの一覧は、投稿タイプの登録（ETSS_Post_Types）で WordPress が作る。
  * 支援・依頼のリンクは、受託先のサイトの例外として、プラグイン一覧の行だけに置く。
@@ -25,6 +25,17 @@ class ETSS_Admin {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'add_menu' ) );
 		add_filter( 'plugin_row_meta', array( __CLASS__, 'plugin_row_meta' ), 10, 4 );
+	}
+
+	/**
+	 * CSS・JS の版数を返す。ヘッダの `Version:` を読む（版数の置き場を1か所にするため）。
+	 *
+	 * @return string 版数。読めなければ空文字。
+	 */
+	public static function asset_version() {
+		$data = get_file_data( ETSS_PLUGIN_FILE, array( 'Version' => 'Version' ) );
+
+		return isset( $data['Version'] ) ? (string) $data['Version'] : '';
 	}
 
 	/**

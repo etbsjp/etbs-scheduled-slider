@@ -138,6 +138,18 @@ class ETSS_Templates {
 	}
 
 	/**
+	 * スライダーが使っているひな形を返す。保存されたひな形の ID が無いときは既定のひな形。
+	 *
+	 * @param int $slider_id スライダーの投稿 ID。
+	 * @return array|null ひな形の定義。登録されていなければ null。
+	 */
+	public static function for_slider( $slider_id ) {
+		$id = get_post_meta( (int) $slider_id, ETSS_Meta::TEMPLATE, true );
+
+		return self::get( ( is_string( $id ) && '' !== $id ) ? $id : self::DEFAULT_ID );
+	}
+
+	/**
 	 * ひな形で新しいスライダーを作ったときの動きの設定を返す（本体の既定値に、ひな形の `default_options` を重ねる）。
 	 *
 	 * @param string $id ひな形の ID。
