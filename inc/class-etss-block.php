@@ -28,6 +28,11 @@ class ETSS_Block {
 	const EDITOR_HANDLE = 'etss-slider-editor';
 
 	/**
+	 * VK Blocks のスライダーが使えないときの案内（編集画面のブロックの警告に使う）。原因を2つ並べる。
+	 */
+	const VK_UNAVAILABLE_MESSAGE = 'VK Blocks が有効でないか、VK Blocks のスライダーブロックが無効になっています。VK Blocks（無料版でよい）をインストール・有効化し、スライダーブロックを使える状態にしてください。';
+
+	/**
 	 * このリクエストで、スライダーごとに何回描画したか（スライダーの投稿 ID => 回数）。
 	 *
 	 * @var array
@@ -130,6 +135,15 @@ class ETSS_Block {
 		// 次の切替時刻までをページキャッシュの保存期間にする。
 		$max_ttl = (int) apply_filters( 'etss_max_ttl', ETSS_Schedule::DEFAULT_MAX_TTL );
 		ETSS_Cache::set_ttl( ETSS_Schedule::cache_ttl( ETSS_Schedule::next_switch_time( $slides, $now ), $now, $max_ttl ) );
+
+		// 画像の読み出し（投稿・メタ）をまとめて済ませる。スライドの数だけ問い合わせないため。
+		$attachment_ids = array();
+		foreach ( $slides as $slide ) {
+			$attachment_ids = array_merge( $attachment_ids, array_map( 'intval', array_values( $slide['images'] ) ) );
+		}
+		if ( $attachment_ids ) {
+			_prime_post_caches( array_values( array_unique( array_filter( $attachment_ids ) ) ), false, true );
+		}
 
 		$selected = ETSS_Render::select_slides( $slides, $slider_id, $template['slots'], $now, 'wp_attachment_is_image' );
 		if ( ! $selected ) {
@@ -267,6 +281,9 @@ class ETSS_Block {
 		$data = array(
 			'canManage'   => current_user_can( ETSS_Post_Types::get_capability() ),
 			'vkAvailable' => self::is_vk_available(),
+			'vkMessage'   => self::VK_UNAVAILABLE_MESSAGE,
+			// プラグインの画面は、有効化できる人にだけ案内する。
+			'pluginsUrl'  => current_user_can( 'activate_plugins' ) ? admin_url( 'plugins.php' ) : '',
 			'sliders'     => array(),
 			'newUrl'      => admin_url( 'post-new.php?post_type=' . ETSS_Post_Types::SLIDER ),
 		);
@@ -275,7 +292,7 @@ class ETSS_Block {
 			$data['sliders'] = self::editor_sliders( time() );
 		}
 
-		wp_add_inline_script( self::EDITOR_HANDLE, 'window.etssSliderBlock = ' . wp_json_encode( $data ) . ';', 'before' );
+		wp_add_inline_script( self::EDITOR_HANDLE, 'window.etssSliderBlock = ' . wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';', 'before' );
 	}
 
 	/**
@@ -294,19 +311,22 @@ class ETSS_Block {
 		$sliders  = array();
 		foreach ( ETSS_Slide_Admin::slider_choices() as $slider_id => $label ) {
 			$summary   = ETSS_List::summarize_slider( isset( $by_slider[ $slider_id ] ) ? $by_slider[ $slider_id ] : array(), $now );
+			$status    = (string) get_post_status( $slider_id );
 			$sliders[] = array(
-				'id'      => (int) $slider_id,
-				'label'   => $label,
-				'active'  => (int) $summary['active'],
-				'next'    => ETSS_List::describe_next( $summary['next'], $now, $timezone ),
-				'listUrl' => add_query_arg(
+				'id'        => (int) $slider_id,
+				// 公開されていないスライダーは、選ぶ前に分かるよう状態を添える。
+				'label'     => $label . ETSS_Display::slider_status_suffix( $status ),
+				'published' => 'publish' === $status,
+				'active'    => (int) $summary['active'],
+				'next'      => ETSS_List::describe_next( $summary['next'], $now, $timezone ),
+				'listUrl'   => add_query_arg(
 					array(
 						'post_type'                 => ETSS_Post_Types::SLIDE,
 						ETSS_List_Admin::SLIDER_ARG => (int) $slider_id,
 					),
 					admin_url( 'edit.php' )
 				),
-				'editUrl' => (string) get_edit_post_link( $slider_id, 'raw' ),
+				'editUrl'   => (string) get_edit_post_link( $slider_id, 'raw' ),
 			);
 		}
 
@@ -328,8 +348,13 @@ class ETSS_Block {
 			return;
 		}
 
-		$message = 'VK Blocks のスライダーが使えないため、スライダーは表示されていません（サイトには何も出ていません）。VK Blocks（無料版でよい）を有効にしてください。';
-		$link    = ( 'plugins' !== $screen->id && current_user_can( 'activate_plugins' ) ) ? ' <a href="' . esc_url( admin_url( 'plugins.php' ) ) . '">プラグインの画面を開く</a>' : '';
+		$message = 'VK Blocks のスライダーが使えないため、サイトにスライダーが出ていません。';
+		if ( ! current_user_can( 'activate_plugins' ) ) {
+			$message .= '管理者に VK Blocks の有効化を依頼してください。';
+			$link     = '';
+		} else {
+			$link = 'plugins' !== $screen->id ? ' <a href="' . esc_url( admin_url( 'plugins.php' ) ) . '">プラグインの画面を開く</a>' : '';
+		}
 
 		echo '<div class="notice notice-error"><p><strong>ETBS Scheduled Slider:</strong> ' . esc_html( $message ) . wp_kses_post( $link ) . '</p></div>';
 	}

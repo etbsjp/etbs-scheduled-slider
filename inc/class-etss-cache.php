@@ -52,6 +52,9 @@ class ETSS_Cache {
 		add_action( 'trashed_post', array( __CLASS__, 'purge_after_change' ) );
 		add_action( 'untrashed_post', array( __CLASS__, 'purge_after_change' ) );
 		add_action( 'before_delete_post', array( __CLASS__, 'purge_after_change' ) );
+
+		// 添付ファイルを削除すると、その画像を使うスライドが出せなくなる。
+		add_action( 'delete_attachment', array( __CLASS__, 'purge_after_delete_attachment' ) );
 	}
 
 	/**
@@ -199,6 +202,68 @@ class ETSS_Cache {
 		} elseif ( ETSS_Post_Types::SLIDER === $post_type ) {
 			self::purge_slider( $post_id );
 		}
+	}
+
+	/**
+	 * 添付ファイルを完全に削除するとき、その画像を使うスライドが属するスライダーのキャッシュを捨てる。
+	 *
+	 * 削除のあとは、描画の時点の検査（画像が実在すること）でそのスライドが出なくなるため、ページキャッシュも作り直す必要がある。
+	 *
+	 * @param int $attachment_id 添付ファイルの投稿 ID。
+	 * @return void
+	 */
+	public static function purge_after_delete_attachment( $attachment_id ) {
+		$attachment_id = (int) $attachment_id;
+		if ( $attachment_id <= 0 ) {
+			return;
+		}
+
+		// 画像の添付 ID は配列を直列化して持つので、整数の形（`;i:123;`）と文字列の形（`;s:3:"123";`）の両方で探す。
+		$slide_ids = get_posts(
+			array(
+				'post_type'      => ETSS_Post_Types::SLIDE,
+				'post_status'    => 'any',
+				'posts_per_page' => -1,
+				'no_found_rows'  => true,
+				'fields'         => 'ids',
+				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- 添付ファイルを使うスライドを探すのに必要。
+					'relation' => 'OR',
+					array(
+						'key'     => ETSS_Meta::IMAGES,
+						'value'   => ';i:' . $attachment_id . ';',
+						'compare' => 'LIKE',
+					),
+					array(
+						'key'     => ETSS_Meta::IMAGES,
+						'value'   => ';s:' . strlen( (string) $attachment_id ) . ':"' . $attachment_id . '";',
+						'compare' => 'LIKE',
+					),
+				),
+			)
+		);
+
+		foreach ( self::slider_ids_of_slides( $slide_ids ) as $slider_id ) {
+			self::purge_slider( $slider_id );
+		}
+	}
+
+	/**
+	 * スライドの投稿 ID の配列から、所属するスライダーの投稿 ID（重複なし）を求める。
+	 *
+	 * @param array $slide_ids スライドの投稿 ID の配列。
+	 * @return int[] スライダーの投稿 ID。所属が無いスライドは含めない。
+	 */
+	public static function slider_ids_of_slides( array $slide_ids ) {
+		$slider_ids = array();
+
+		foreach ( $slide_ids as $slide_id ) {
+			$slider_id = (int) get_post_meta( $slide_id, ETSS_Meta::SLIDER_ID, true );
+			if ( $slider_id > 0 ) {
+				$slider_ids[ $slider_id ] = $slider_id;
+			}
+		}
+
+		return array_values( $slider_ids );
 	}
 
 	/**

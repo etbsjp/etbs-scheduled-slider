@@ -247,4 +247,24 @@ class DisplayTest extends TestCase {
 		$this->assertSame( '&lt;b&gt;', ETSS_Display::writeback_html( '<b>' ) );
 		$this->assertSame( '', ETSS_Display::writeback_html( '' ) );
 	}
+
+	/**
+	 * ETSS_Display::slider_status_suffix() のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_slider_status_suffix() {
+		$test_cases = array(
+			array( 'publish', '' ),
+			array( 'draft', '（下書き）' ),
+			array( 'pending', '（承認待ち）' ),
+			array( 'private', '（非公開）' ),
+			array( 'future', '（予約）' ),
+			array( 'trash', '（公開されていません）' ),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$this->assertSame( $case[1], ETSS_Display::slider_status_suffix( $case[0] ), $case[0] );
+		}
+	}
 }

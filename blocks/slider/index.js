@@ -17,10 +17,10 @@
 	/**
 	 * 編集画面のデータを返す。PHP が渡せなかったときも落ちないようにする。
 	 *
-	 * @return {Object} canManage・vkAvailable・sliders・newUrl。
+	 * @return {Object} canManage・vkAvailable・vkMessage・pluginsUrl・sliders・newUrl。
 	 */
 	function getData() {
-		return window.etssSliderBlock || { canManage: false, vkAvailable: true, sliders: [], newUrl: '' };
+		return window.etssSliderBlock || { canManage: false, vkAvailable: true, vkMessage: '', pluginsUrl: '', sliders: [], newUrl: '' };
 	}
 
 	/**
@@ -55,6 +55,20 @@
 			);
 		}
 
+		// 公開されていないスライダーは、スライドがあっても何も出ない。枚数ではなく、公開が要ることを伝える。
+		if ( ! slider.published ) {
+			return el(
+				Fragment,
+				null,
+				el(
+					Notice,
+					{ status: 'warning', isDismissible: false },
+					'このスライダーは公開されていないため、公開したページには何も出ません。スライダーの設定を開いて公開してください。'
+				),
+				slider.editUrl ? el( 'p', null, el( ExternalLink, { href: slider.editUrl }, 'スライダーの設定を開く' ) ) : null
+			);
+		}
+
 		return el(
 			Fragment,
 			null,
@@ -68,7 +82,7 @@
 				? el(
 						Notice,
 						{ status: 'warning', isDismissible: false },
-						'いま表示するスライドがありません。公開したページには何も出ません。スライドの一覧で、表示中のスライドを確かめてください。'
+						'いま表示するスライドがありません。公開したページには何も出ません。表示予定や期間を、スライドの一覧で確かめてください。'
 				  )
 				: null,
 			el( 'p', null, el( ExternalLink, { href: slider.listUrl }, 'このスライダーのスライドの一覧を開く' ) ),
@@ -93,13 +107,14 @@
 					el(
 						Notice,
 						{ key: 'vk', status: 'warning', isDismissible: false },
-						'VK Blocks のスライダーが使えないため、公開したページには何も表示されません。VK Blocks（無料版でよい）を有効にしてください。'
+						data.vkMessage,
+						data.pluginsUrl ? el( 'p', null, el( ExternalLink, { href: data.pluginsUrl }, 'プラグインの画面を開く' ) ) : null
 					)
 				);
 			}
 
 			if ( ! data.canManage ) {
-				children.push( el( 'p', { key: 'cap' }, 'スライダーを選べるのは、編集者以上の権限をもつ人です。' ) );
+				children.push( el( 'p', { key: 'cap' }, 'このブロックの設定は編集者以上の人が行います。' ) );
 			} else if ( data.sliders.length === 0 ) {
 				children.push(
 					el(

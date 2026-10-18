@@ -94,13 +94,15 @@ function esc_html( $text ) {
  * @return void
  */
 function etss_test_reset_wp() {
-	$GLOBALS['etss_test_meta']     = array();
-	$GLOBALS['etss_test_posts']    = array();
-	$GLOBALS['etss_test_attach']   = array();
-	$GLOBALS['etss_test_can']      = true;
-	$GLOBALS['etss_test_autosave'] = false;
-	$_POST                         = array();
-	$_GET                          = array();
+	$GLOBALS['etss_test_get_posts']      = array();
+	$GLOBALS['etss_test_get_posts_args'] = array();
+	$GLOBALS['etss_test_meta']           = array();
+	$GLOBALS['etss_test_posts']          = array();
+	$GLOBALS['etss_test_attach']         = array();
+	$GLOBALS['etss_test_can']            = true;
+	$GLOBALS['etss_test_autosave']       = false;
+	$_POST                               = array();
+	$_GET                                = array();
 }
 
 /**
@@ -384,6 +386,17 @@ function wp_get_attachment_image( $id, $size = 'thumbnail', $icon = false, $attr
 	}
 
 	return $html . ' />';
+}
+
+/**
+ * get_posts() のスタブ。etss_test_get_posts に入れた結果を返し、渡された引数を記録する。
+ *
+ * @param array $args 引数。
+ * @return array
+ */
+function get_posts( $args = array() ) {
+	$GLOBALS['etss_test_get_posts_args'] = $args;
+	return $GLOBALS['etss_test_get_posts'];
 }
 
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-schedule.php';

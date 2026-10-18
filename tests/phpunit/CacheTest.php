@@ -209,6 +209,56 @@ class CacheTest extends TestCase {
 	}
 
 	/**
+	 * 添付ファイルの削除のテスト（その画像を使うスライドの所属スライダーを捨てる）。
+	 *
+	 * @return void
+	 */
+	public function test_purge_after_delete_attachment() {
+		$this->add_slide( 100, 5 );
+		$this->add_slide( 101, 5 );
+		$this->add_slide( 102, 6 );
+		$GLOBALS['etss_test_get_posts'] = array( 100, 101, 102 );
+
+		ETSS_Cache::purge_after_delete_attachment( 429 );
+
+		$this->assertSame(
+			array(
+				array( 'litespeed_purge', 'etss_5' ),
+				array( 'litespeed_purge', 'etss_6' ),
+			),
+			$this->calls(),
+			'使っているスライドの所属スライダーを、重複なしで捨てる'
+		);
+
+		$values = array_column( $GLOBALS['etss_test_get_posts_args']['meta_query'], 'value' );
+		$this->assertContains( ';i:429;', $values, '整数の形で探す' );
+		$this->assertContains( ';s:3:"429";', $values, '文字列の形でも探す' );
+
+		etss_test_reset();
+		$GLOBALS['etss_test_get_posts'] = array();
+		ETSS_Cache::purge_after_delete_attachment( 429 );
+		ETSS_Cache::purge_after_delete_attachment( 0 );
+		$this->assertSame( array(), $this->calls(), '使っているスライドが無い・ID が不正なら何もしない' );
+	}
+
+	/**
+	 * スライドの所属スライダーの求め方のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_slider_ids_of_slides() {
+		$this->add_slide( 100, 5 );
+		$this->add_slide( 101, 5 );
+		$GLOBALS['etss_test_posts'][102] = (object) array(
+			'post_type'   => 'etss_slide',
+			'post_status' => 'publish',
+		);
+
+		$this->assertSame( array( 5 ), ETSS_Cache::slider_ids_of_slides( array( 100, 101, 102 ) ), '重複を除き、所属が無いスライドは含めない' );
+		$this->assertSame( array(), ETSS_Cache::slider_ids_of_slides( array() ), '空なら空' );
+	}
+
+	/**
 	 * 停止時の purge のテスト。
 	 *
 	 * @return void
