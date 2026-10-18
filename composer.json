@@ -1,0 +1,22 @@
+{
+    "name": "etbsjp/etbs-scheduled-slider",
+    "description": "CI 用の開発依存のみを定義する。配布 zip には含めない（.gitattributes で export-ignore 済み）。",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.9",
+        "wp-coding-standards/wpcs": "^3.1",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "sirbrillig/phpcs-changed": "3.0.1",
+        "phpunit/phpunit": "^9.6"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "platform": {
+            "php": "7.3.0"
+        }
+    },
+    "minimum-stability": "stable"
+}

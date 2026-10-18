@@ -54,10 +54,21 @@ Local の `ai-wp-demo`（`aiwpdemo.etbs.lc`）に、VK Blocks（wordpress.org �
 
 - Local のサーバは LiteSpeed ではないので、hit/miss は出ない。キャッシュの確認は LSCWP のデバッグログで行う
   - TTL（`[Ctrl] X Cache_control TTL -> N`）・目印（`[Tag] Add etss`）・nocache は、そのままで記録される
-  - purge は `LITESPEED_ON` が無いと記録されない。Apache に `SetEnv X-LSCACHE on` を入れて立て、応答の `X-LiteSpeed-Purge`・`X-LiteSpeed-Tag` のヘッダで確かめる（#1 で陽性対照を取った手順をここに書き足す）
+  - ログの出し方: `wp litespeed-option set debug 1`。ログは `wp-content/litespeed/debug/debug*.log`（LSCWP 7.9.1 の実際の文言は `X Cache_control TTL -> N`・`[Tag] Add  --- etss`・`added _etss`）
+  - purge の陽性対照（#1・LSCWP 7.9.1 で「出た」）の手順:
+    1. 一時の mu-plugin（`wp-content/mu-plugins/` に置き、**終わったら必ず削除。コミットしない**）で、`template_redirect` に `do_action( 'litespeed_control_set_ttl', 600 )`・`do_action( 'litespeed_tag_add', 'etss' )` を書き、`?etss_purge=1` のときだけ `do_action( 'litespeed_purge', 'etss' )` を呼ぶ
+    2. Apache の設定に `SetEnv X-LSCACHE on` を足して再起動する（Local の設定ファイルは書き換えず、`Include` で Local の `apache2.conf` を読み込む自前の設定ファイルを作って `httpd -f` に渡す）
+    3. `curl -D -` で `/` と `/?etss_purge=1` を取り、`X-LiteSpeed-Cache-Control: public,max-age=600`・`X-LiteSpeed-Tag: b3c_etss,…`・`X-LiteSpeed-Purge: public,b3c_etss` とログを確かめる
+  - 7.9.1 では `SetEnv` が無くても purge のヘッダとログは出た。CLI の purge（`wp plugin deactivate`）は「CLI request, queue stored」としてログに残る
+- Local のサイトが GUI で止まっているときは、Local の設定ファイル（`~/Library/Application Support/Local/run/<サイト ID>/conf/`）で mysqld・php-fpm・httpd を手で起動できる。ただし php-fpm は Local の `php-fpm.conf` の `include` が相対パスで通らないので、絶対パスの `include` を書いた自前の conf を `-y` で渡す。**終わったら必ず3つとも止める**（止めないと、あとで GUI からサイトを起動したときにポートが衝突する）
+- WP_DEBUG は `wp-config.php` を触らずに有効にする。CLI は `wp --require=<define 3行のファイル>`（`WP_DEBUG`・`WP_DEBUG_LOG`・`WP_DEBUG_DISPLAY`）、Web は php-fpm の `-d auto_prepend_file=<同じファイル>`。ログが作られなければ、通知も警告も出ていない
 - ★ ai-wp-demo は他のプラグインと共用の検証サイト。LiteSpeed Cache は有効化のときと、その後最初に管理画面を開いたときに `.htaccess` を書き換える。入れる前に `.htaccess` を控え、md5 を記録する
+  - #1 の実測: 有効化前 `7fb26e61920d1bb387b6effebb071790`（15行）→ LSCWP 有効化後 `d4c495a541a9b879063d74af01b0d3b5`（`# BEGIN LSCACHE`〜`# END NON_LSCACHE` が先頭に入る）→ 停止後 `9bd4157f7bc7f73dde46f5d1401508c5`（空の `LSCACHE`・`NON_LSCACHE` の枠が残る）。控えを書き戻して `7fb26e61…` に戻した
+  - LSCWP は `wp-config.php` にも `define( 'WP_CACHE', true )`（有効化で入り、停止で消える）と `WP_CACHE_KEY_SALT` を足す
+  - 検証が終わったら LSCWP を停止して `.htaccess` を控えから戻す（共用サイトに他のプラグインの検証を邪魔する書き換えを残さない）。入れた VK Blocks（1.128.0）・LiteSpeed Cache（7.9.1）は削除せず残す
 - ★★★ **uninstall の検証は `uninstall_plugin()` を CLI で呼ぶ。管理画面の「削除」は押さない**（シンボリックリンク設置のまま削除すると、リンク先のこの repo の中身が全部消える）
 - エージェントは `<repo>/.claude/worktrees/` で作業するが、Local のプラグインは本体クローンへのシンボリックリンク。実画面で確かめるときは向き先を worktree へ一時的に変え、終わったら戻す
+- 権限（D9）の確認: 一時の投稿者・編集者のユーザーを作り、`curl` で `wp-login.php` にログインして `edit.php?post_type=etss_slide`・`post.php?post=<ID>&action=edit` を直接開く（投稿者は 403、編集者は 200）。終わったらユーザーと検証用の投稿（自動下書きを含む）を削除する
 - CLI 検証では Local の php.ini を `-c` で渡すこと。wp-cli は `-d mysqli.default_socket=<Local のソケット>` を付ける
 
 ## テスト
