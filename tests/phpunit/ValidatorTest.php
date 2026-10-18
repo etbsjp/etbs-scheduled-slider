@@ -556,4 +556,137 @@ class ValidatorTest extends TestCase {
 		$result = ETSS_Validator::validate_slide( 'a', $full, $this->context() );
 		$this->assertSame( array(), $result['errors'] );
 	}
+
+	/**
+	 * validate_slide() の `unsaved`（下書き保存のときに保存済みの値のまま保つ欄）のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_validate_slide_unsaved() {
+		$test_cases = array(
+			array(
+				'test_condition_name' => 'すべて正しい => 保存しない欄なし',
+				'input'               => array(),
+				'expected'            => array(),
+			),
+			array(
+				'test_condition_name' => 'リンク先が example.com => リンク先を保存しない',
+				'input'               => array( 'url' => 'example.com' ),
+				'expected'            => array( 'url' => 'リンク先は形式が正しくないため保存していません。' ),
+			),
+			array(
+				'test_condition_name' => 'リンク先が空 => 空にしたいだけなので対象外（必須のエラーにはなる）',
+				'input'               => array( 'url' => '' ),
+				'expected'            => array(),
+			),
+			array(
+				'test_condition_name' => '表示開始日時が日時でない',
+				'input'               => array( 'start' => '2026-02-30T10:00' ),
+				'expected'            => array( 'start' => '表示開始日時は形式が正しくないため保存していません。' ),
+			),
+			array(
+				'test_condition_name' => '表示終了日時が日時でない',
+				'input'               => array( 'end' => 'あした' ),
+				'expected'            => array( 'end' => '表示終了日時は形式が正しくないため保存していません。' ),
+			),
+			array(
+				'test_condition_name' => '表示終了日時が表示開始日時以前',
+				'input'               => array( 'end' => '2026-11-06T12:00' ),
+				'expected'            => array( 'end' => '表示終了日時は表示開始日時より後ではないため保存していません。' ),
+			),
+			array(
+				'test_condition_name' => '存在しない画像',
+				'input'               => array( 'images' => array( 'wide' => 999 ) ),
+				'expected'            => array( 'image-wide' => '横長の画像は見つからないため保存していません。' ),
+			),
+			array(
+				'test_condition_name' => '同じ画像を 2 つの枠に入れた => 2 つ目の枠を保存しない',
+				'input'               => array(
+					'images' => array(
+						'wide' => 10,
+						'tall' => 10,
+					),
+				),
+				'expected'            => array( 'image-tall' => '縦長の画像は、「横長」と同じ画像のため保存していません。' ),
+			),
+			array(
+				'test_condition_name' => '必須の画像が空 => 外したいだけなので対象外',
+				'input'               => array( 'images' => array( 'wide' => 0 ) ),
+				'expected'            => array(),
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$result = ETSS_Validator::validate_slide( 'a', $this->valid_input( $case['input'] ), $this->context() );
+
+			$this->assertSame( $case['expected'], $result['unsaved'], $case['test_condition_name'] );
+		}
+	}
+
+	/**
+	 * ETSS_Validator::keep_saved_values() のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_keep_saved_values() {
+		$values = array(
+			'slider_id' => 5,
+			'images'    => array( 'wide' => 11 ),
+			'url'       => '',
+			'start'     => 0,
+			'end'       => 0,
+		);
+		$saved  = array(
+			'slider_id' => 5,
+			'images'    => array(
+				'wide' => 10,
+				'tall' => 12,
+			),
+			'url'       => '/saved/',
+			'start'     => 100,
+			'end'       => 200,
+		);
+
+		$test_cases = array(
+			array(
+				'test_condition_name' => '保存しない欄なし => 値はそのまま',
+				'unsaved'             => array(),
+				'expected'            => $values,
+			),
+			array(
+				'test_condition_name' => 'リンク先・表示開始・表示終了を保存しない => 保存済みの値に戻る',
+				'unsaved'             => array(
+					'url'   => 'x',
+					'start' => 'x',
+					'end'   => 'x',
+				),
+				'expected'            => array_merge(
+					$values,
+					array(
+						'url'   => '/saved/',
+						'start' => 100,
+						'end'   => 200,
+					)
+				),
+			),
+			array(
+				'test_condition_name' => '画像枠 wide を保存しない => その枠だけ保存済みの画像に戻る',
+				'unsaved'             => array( 'image-wide' => 'x' ),
+				'expected'            => array_merge( $values, array( 'images' => array( 'wide' => 10 ) ) ),
+			),
+			array(
+				'test_condition_name' => '保存済みに無い画像枠を保存しない => その枠は空のまま',
+				'unsaved'             => array( 'image-extra' => 'x' ),
+				'expected'            => $values,
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$this->assertSame( $case['expected'], ETSS_Validator::keep_saved_values( $values, $case['unsaved'], $saved ), $case['test_condition_name'] );
+		}
+
+		// 保存済みの値が無い（新規）ときは、空・0 に戻る。
+		$kept = ETSS_Validator::keep_saved_values( array_merge( $values, array( 'url' => '/x/' ) ), array( 'url' => 'x' ), array() );
+		$this->assertSame( '', $kept['url'], '保存済みが無ければ空' );
+	}
 }

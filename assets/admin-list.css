@@ -1,0 +1,105 @@
+/* ETBS Scheduled Slider: スライドの一覧 */
+
+/* 列の幅 */
+.post-type-etss_slide .wp-list-table .column-etss_thumb {
+	width: 150px;
+}
+
+.post-type-etss_slide .wp-list-table .column-etss_slider {
+	width: 14%;
+}
+
+.post-type-etss_slide .wp-list-table .column-etss_status {
+	width: 16%;
+}
+
+.post-type-etss_slide .wp-list-table .column-etss_start,
+.post-type-etss_slide .wp-list-table .column-etss_end {
+	width: 11em;
+}
+
+.post-type-etss_slide .wp-list-table .column-etss_order {
+	width: 5em;
+}
+
+/* サムネイル */
+.etss-thumbs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.etss-thumbs__item {
+	margin: 0;
+	line-height: 1.4;
+}
+
+.etss-thumbs__item img {
+	display: block;
+	width: auto;
+	max-width: 96px;
+	height: auto;
+	max-height: 48px;
+	border: 1px solid #c3c4c7;
+}
+
+/* 足りない枠は、画像と見分けられるよう文字で出す。必須の枠だけ警告の色にする。 */
+.etss-thumbs__missing {
+	color: #b32d2e;
+	font-weight: 600;
+}
+
+.etss-thumbs__empty,
+.etss-muted {
+	color: #50575e;
+}
+
+/* 表示開始の下の残り日数 */
+.etss-remaining {
+	display: block;
+	color: #50575e;
+}
+
+/* 一覧の上の要約と警告 */
+.etss-summary.notice,
+.etss-summary-warnings.notice {
+	padding: 0;
+}
+
+.etss-summary__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+/* 行どうしの間隔は、1行の中の要素どうしの間隔より広くする。 */
+.etss-summary__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px 12px;
+	align-items: baseline;
+	margin: 0;
+	padding: 10px 12px;
+	line-height: 1.5;
+}
+
+.etss-summary__row + .etss-summary__row {
+	border-top: 1px solid #dcdcde;
+}
+
+.etss-summary__name {
+	font-weight: 600;
+}
+
+.etss-summary__actions {
+	flex-basis: 100%;
+}
+
+@media (min-width: 783px) {
+	.etss-summary__actions {
+		flex-basis: auto;
+	}
+}

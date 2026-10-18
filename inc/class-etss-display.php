@@ -117,6 +117,44 @@ class ETSS_Display {
 	}
 
 	/**
+	 * 一覧の日時を「11/06（金）12:00」の形にする。現在と年が違うときだけ、頭に「2027/」を付ける。
+	 *
+	 * @param int          $timestamp UTC の Unix 秒。
+	 * @param int          $now       現在時刻（UTC の Unix 秒）。
+	 * @param DateTimeZone $timezone  表示するタイムゾーン。
+	 * @return string 書式化した日時。
+	 */
+	public static function format_list_datetime( $timestamp, $now, DateTimeZone $timezone ) {
+		$date   = ( new DateTimeImmutable( '@' . (int) $timestamp ) )->setTimezone( $timezone );
+		$today  = ( new DateTimeImmutable( '@' . (int) $now ) )->setTimezone( $timezone );
+		$prefix = $date->format( 'Y' ) === $today->format( 'Y' ) ? '' : $date->format( 'Y' ) . '/';
+
+		return $prefix . self::format_short( $timestamp, $timezone );
+	}
+
+	/**
+	 * 残り時間を、一覧用に短く「あと3日」「あと5時間」「あと30分」にする。1分未満は「まもなく」。
+	 *
+	 * @param int $diff 対象の時刻 − 現在時刻（秒）。0 以下は「まもなく」。
+	 * @return string 文言。
+	 */
+	public static function format_remaining_short( $diff ) {
+		$diff = (int) $diff;
+
+		if ( $diff >= 86400 ) {
+			return 'あと' . intdiv( $diff, 86400 ) . '日';
+		}
+		if ( $diff >= 3600 ) {
+			return 'あと' . intdiv( $diff, 3600 ) . '時間';
+		}
+		if ( $diff >= 60 ) {
+			return 'あと' . intdiv( $diff, 60 ) . '分';
+		}
+
+		return 'まもなく';
+	}
+
+	/**
 	 * 秒数を「3日4時間」「2時間30分」「5分」の形にする。1分未満は「1分未満」。
 	 *
 	 * @param int $seconds 0 以上の秒数。

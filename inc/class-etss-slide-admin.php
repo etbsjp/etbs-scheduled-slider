@@ -159,7 +159,7 @@ class ETSS_Slide_Admin {
 	 * @param int $post_id スライドの投稿 ID。
 	 * @return array `slider_id`・`images`・`url`・`start`・`end`。
 	 */
-	private static function get_saved( $post_id ) {
+	public static function get_saved( $post_id ) {
 		$images = get_post_meta( $post_id, ETSS_Meta::IMAGES, true );
 		$url    = get_post_meta( $post_id, ETSS_Meta::URL, true );
 
@@ -197,7 +197,7 @@ class ETSS_Slide_Admin {
 	 * @param array $input ETSS_Validator::normalize_input() の結果。
 	 * @return array ETSS_Validator::validate_slide() の `$context`。
 	 */
-	private static function build_context( array $input ) {
+	public static function build_context( array $input ) {
 		$slider_id = ETSS_Validator::parse_id( $input['slider_id'] );
 		$found     = $slider_id > 0 && ETSS_Post_Types::SLIDER === get_post_type( $slider_id ) && 'trash' !== get_post_status( $slider_id );
 
@@ -241,10 +241,11 @@ class ETSS_Slide_Admin {
 	 * 編集画面から来た（nonce が合う）ときは送信値で、来ていないとき（一括編集・REST・プログラムからの保存など）は保存済みの値で検査する。
 	 *
 	 * @param int    $post_id          スライドの投稿 ID（新規で未確定なら 0）。
-	 * @param string $title            保存しようとしているタイトル。
+	 * @param string $title            保存しようとしているタイトル（slash を外した形）。
 	 * @param string $requested_status 保存しようとしている投稿ステータス。
 	 * @param array  $meta_input       wp_insert_post() に渡されたメタ（`meta_input`）。
-	 * @return array `result`（validate_slide の結果）・`decision`・`from_form`・`input`・`title`・`snapshot`（保存前のメタ）。
+	 * @return array `result`（validate_slide の結果）・`decision`・`from_form`・`input`・`title`・`snapshot`（保存前のメタ）・
+	 *               `unsaved`（下書き保存で、保存済みの値のまま保った欄。欄のキー => 通知の文）。
 	 */
 	private static function get_entry( $post_id, $title, $requested_status, array $meta_input = array() ) {
 		$post_id = (int) $post_id;
@@ -289,6 +290,8 @@ class ETSS_Slide_Admin {
 			'input'     => $input,
 			'title'     => (string) $title,
 			'snapshot'  => self::snapshot_meta( $post_id ),
+			// 下書き保存（公開に登録しない保存）で、使えない入力があった欄。保存済みの値のまま保つ。
+			'unsaved'   => ( 'keep' === $decision && $from_form ) ? $result['unsaved'] : array(),
 		);
 
 		self::$entries[ $post_id ] = $entry;
@@ -322,9 +325,10 @@ class ETSS_Slide_Admin {
 
 		$post_id    = isset( $postarr['ID'] ) ? (int) $postarr['ID'] : 0;
 		$meta_input = ( isset( $postarr['meta_input'] ) && is_array( $postarr['meta_input'] ) ) ? $postarr['meta_input'] : array();
-		$title      = isset( $data['post_title'] ) ? $data['post_title'] : '';
-		$entry      = self::get_entry( $post_id, $title, $requested, $meta_input );
-		$current    = ( 'reject' === $entry['decision'] ) ? get_post( $post_id ) : null;
+		// $data は slash 済み。検査・画面に戻す値は slash を外した形でそろえる。
+		$title   = isset( $data['post_title'] ) ? wp_unslash( $data['post_title'] ) : '';
+		$entry   = self::get_entry( $post_id, $title, $requested, $meta_input );
+		$current = ( 'reject' === $entry['decision'] ) ? get_post( $post_id ) : null;
 
 		return self::apply_decision( $data, $requested, $entry['decision'], $current, current_time( 'mysql' ), current_time( 'mysql', true ) );
 	}
@@ -434,6 +438,10 @@ class ETSS_Slide_Admin {
 		}
 
 		$values = $entry['result']['values'];
+		if ( $entry['unsaved'] ) {
+			// 下書き保存で形式が正しくない欄は、保存済みの値のまま保つ（黙って捨てない）。
+			$values = ETSS_Validator::keep_saved_values( $values, $entry['unsaved'], self::get_saved( $post_id ) );
+		}
 
 		// 値を保存する。空のものは、メタを残さない。
 		self::update_or_delete( $post_id, ETSS_Meta::SLIDER_ID, $values['slider_id'] > 0 ? $values['slider_id'] : null );
@@ -487,7 +495,7 @@ class ETSS_Slide_Admin {
 	 *
 	 * @param int        $post_id 投稿 ID。
 	 * @param string     $key     メタのキー。
-	 * @param mixed|null $value   値。null なら消す。
+	 * @param mixed|null $value   値（slash は付けない形）。null なら消す。
 	 * @return void
 	 */
 	private static function update_or_delete( $post_id, $key, $value ) {
@@ -496,13 +504,14 @@ class ETSS_Slide_Admin {
 			return;
 		}
 
-		update_post_meta( $post_id, $key, $value );
+		// update_post_meta() は値の slash を外すので、先に付けておく（値の途中のバックスラッシュが欠けないように）。
+		update_post_meta( $post_id, $key, wp_slash( $value ) );
 	}
 
 	/**
 	 * 前回の保存で出したエラー・警告を、保存後の画面に出すために残す。無ければ消す。
 	 *
-	 * 下書きとして保存しただけ（検査には通らなくてよい）のときは、エラーは出さず、警告だけ残す。
+	 * 下書きとして保存しただけ（検査には通らなくてよい）のときは、エラーは出さず、警告と、保存しなかった欄の通知（`unsaved`）だけ残す。
 	 *
 	 * @param int   $post_id 投稿 ID。
 	 * @param array $entry   get_entry() の結果。
@@ -512,8 +521,9 @@ class ETSS_Slide_Admin {
 		$show_errors = 'keep' !== $entry['decision'] && 'publish' !== $entry['decision'];
 		$errors      = $show_errors ? $entry['result']['errors'] : array();
 		$warnings    = ( 'reject' === $entry['decision'] ) ? array() : $entry['result']['warnings'];
+		$unsaved     = $entry['unsaved'];
 
-		if ( ! $errors && ! $warnings ) {
+		if ( ! $errors && ! $warnings && ! $unsaved ) {
 			delete_post_meta( $post_id, ETSS_Meta::LAST_ERRORS );
 			return;
 		}
@@ -521,22 +531,23 @@ class ETSS_Slide_Admin {
 		$stored = array(
 			'errors'    => $errors,
 			'warnings'  => $warnings,
+			'unsaved'   => $unsaved,
 			'protected' => 'reject' === $entry['decision'],
 		);
 
-		// 下書きに落としたとき・変更を保存しなかったときは、画面に入力を戻せるよう送信値も残す（打った値を失わないため）。
-		if ( $errors && $entry['from_form'] ) {
+		// 下書きに落としたとき・変更を保存しなかったとき・保存しなかった欄があるときは、画面に入力を戻せるよう送信値も残す（打った値を失わないため）。
+		if ( ( $errors || $unsaved ) && $entry['from_form'] ) {
 			$stored['input']          = $entry['input'];
 			$stored['input']['title'] = $entry['title'];
 		}
 
-		update_post_meta( $post_id, ETSS_Meta::LAST_ERRORS, $stored );
+		update_post_meta( $post_id, ETSS_Meta::LAST_ERRORS, wp_slash( $stored ) );
 	}
 
 	/**
 	 * 保存後の画面の移動先を直す。
 	 *
-	 * 下書きに落としたとき・変更を保存しなかったときに、WordPress の緑の「公開しました」を出さない。
+	 * 下書きに落としたとき・変更を保存しなかったとき・保存しなかった欄があるときに、WordPress の緑の「公開しました」「下書きを保存しました」を出さない。
 	 * 代わりに、エラー・警告を出すための引数を付ける。
 	 *
 	 * @param string $location 移動先の URL。
@@ -549,12 +560,12 @@ class ETSS_Slide_Admin {
 		}
 
 		$last = get_post_meta( $post_id, ETSS_Meta::LAST_ERRORS, true );
-		if ( ! is_array( $last ) || ( empty( $last['errors'] ) && empty( $last['warnings'] ) ) ) {
+		if ( ! is_array( $last ) || ( empty( $last['errors'] ) && empty( $last['warnings'] ) && empty( $last['unsaved'] ) ) ) {
 			return $location;
 		}
 
-		// 保存に失敗したときは、成功のメッセージを外す。
-		if ( ! empty( $last['errors'] ) ) {
+		// 保存に失敗したとき、保存しなかった欄があるときは、WordPress の「下書きを保存しました」を外す（黄色の通知が代わりに伝える）。
+		if ( ! empty( $last['errors'] ) || ! empty( $last['unsaved'] ) ) {
 			$location = remove_query_arg( 'message', $location );
 		}
 
@@ -635,12 +646,13 @@ class ETSS_Slide_Admin {
 	 *
 	 * @param int  $post_id 投稿 ID。
 	 * @param bool $show    保存した直後の画面か（read_request_notice_flag() の結果）。
-	 * @return array `errors`・`warnings`・`protected`・`input`（無ければ空）。
+	 * @return array `errors`・`warnings`・`unsaved`・`protected`・`input`（無ければ空）。
 	 */
 	public static function read_last_errors( $post_id, $show ) {
 		$empty = array(
 			'errors'    => array(),
 			'warnings'  => array(),
+			'unsaved'   => array(),
 			'protected' => false,
 			'input'     => array(),
 		);
@@ -746,7 +758,7 @@ class ETSS_Slide_Admin {
 	 *
 	 * @return array スライダーの投稿 ID => 名前。
 	 */
-	private static function slider_choices() {
+	public static function slider_choices() {
 		$posts = get_posts(
 			array(
 				'post_type'        => ETSS_Post_Types::SLIDER,
@@ -1078,6 +1090,14 @@ class ETSS_Slide_Admin {
 			echo '</strong></p>';
 			self::render_error_list( $last['errors'] );
 			echo '</div>';
+		}
+
+		// 下書き保存で、形式が正しくない欄を保存しなかったとき。エラー（赤）にはせず、保存済みの値のままであることを知らせる。
+		if ( $last['unsaved'] ) {
+			echo '<div class="notice notice-warning etss-notice etss-notice--unsaved" role="status"><p>';
+			echo '<strong>下書きを保存しました。</strong>';
+			echo esc_html( implode( '', $last['unsaved'] ) );
+			echo '</p><p>入力した値は欄に残しています。直して、もう一度保存してください。</p></div>';
 		}
 
 		if ( $last['warnings'] ) {
