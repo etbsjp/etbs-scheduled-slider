@@ -1,6 +1,6 @@
 <?php
 /**
- * 管理画面のうち、プラグイン一覧の行の処理。
+ * 管理画面のうち、メニューの補い（スライダーの追加）とプラグイン一覧の行の処理。
  *
  * メニュー「スライダー」と2つの一覧は、投稿タイプの登録（ETSS_Post_Types）で WordPress が作る。
  * 支援・依頼のリンクは、受託先のサイトの例外として、プラグイン一覧の行だけに置く。
@@ -23,7 +23,25 @@ class ETSS_Admin {
 	 * @return void
 	 */
 	public static function init() {
+		add_action( 'admin_menu', array( __CLASS__, 'add_menu' ) );
 		add_filter( 'plugin_row_meta', array( __CLASS__, 'plugin_row_meta' ), 10, 4 );
+	}
+
+	/**
+	 * メニュー「スライダー」の下に、スライダーの「追加」を足す。
+	 *
+	 * 親の投稿タイプ（スライド）と違い、子の投稿タイプ（スライダー）には WordPress が「追加」を作らないため。
+	 *
+	 * @return void
+	 */
+	public static function add_menu() {
+		add_submenu_page(
+			'edit.php?post_type=' . ETSS_Post_Types::SLIDE,
+			'スライダーを追加',
+			'スライダーを追加',
+			ETSS_Post_Types::get_capability(),
+			'post-new.php?post_type=' . ETSS_Post_Types::SLIDER
+		);
 	}
 
 	/**
