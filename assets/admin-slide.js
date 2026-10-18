@@ -79,10 +79,18 @@
 		return diffSeconds > 0 ? 'あと' + formatDuration( diffSeconds ) : formatDuration( -diffSeconds ) + '前';
 	}
 
+	function announce_to( liveId, source ) {
+		var live = document.getElementById( liveId );
+
+		if ( live && source ) {
+			live.textContent = source.textContent;
+		}
+	}
+
 	/**
-	 * 表示開始・表示終了の横の書き戻しを更新する。
+	 * 表示開始・表示終了の横の書き戻しを更新する。announce が true なら、読み上げ用の欄にも同じ文を入れる。
 	 */
-	function updateWritebacks() {
+	function updateWritebacks( announce ) {
 		var now = nowLocalMs();
 		var startWriteback = document.getElementById( 'etss-start-writeback' );
 		var endWriteback = document.getElementById( 'etss-end-writeback' );
@@ -96,6 +104,12 @@
 			endWriteback.textContent = null === end
 				? '→ 表示終了日時なし（自分で外すまで表示し続けます）'
 				: '→ ' + formatFull( end ) + ' に表示終了（' + formatRelative( Math.round( ( end - now ) / 1000 ) ) + '）';
+		}
+
+		// 画面の文字は入力のたびに更新するが、読み上げは、入力が確定したとき（change・ボタン）だけにする。
+		if ( true === announce ) {
+			announce_to( 'etss-start-live', startWriteback );
+			announce_to( 'etss-end-live', endWriteback );
 		}
 	}
 
@@ -112,6 +126,18 @@
 		}
 		if ( target ) {
 			target.removeAttribute( 'aria-invalid' );
+			target.classList.remove( 'is-invalid' );
+		}
+	}
+
+	/**
+	 * 欄を無効な状態にする。ボタンには aria-invalid を付けられないので、見た目のクラスだけにする。
+	 */
+	function markInvalid( target ) {
+		if ( 'BUTTON' === target.tagName ) {
+			target.classList.add( 'is-invalid' );
+		} else {
+			target.setAttribute( 'aria-invalid', 'true' );
 		}
 	}
 
@@ -128,7 +154,7 @@
 			error.hidden = false;
 		}
 		if ( target ) {
-			target.setAttribute( 'aria-invalid', 'true' );
+			markInvalid( target );
 			describedby = ( target.getAttribute( 'aria-describedby' ) || '' ).split( /\s+/ ).filter( Boolean );
 			if ( error && describedby.indexOf( error.id ) === -1 ) {
 				describedby.push( error.id );
@@ -147,7 +173,7 @@
 			if ( error.hidden || ! target ) {
 				return;
 			}
-			target.setAttribute( 'aria-invalid', 'true' );
+			markInvalid( target );
 			target.setAttribute( 'aria-describedby', ( ( target.getAttribute( 'aria-describedby' ) || '' ) + ' ' + error.id ).trim() );
 		} );
 	}
@@ -172,7 +198,7 @@
 		if ( slider && '' === slider.value ) {
 			errors.push( { key: 'slider', message: 'スライダーを選択してください。' } );
 		} else if ( slider && slider.value !== slider.getAttribute( 'data-initial' ) ) {
-			errors.push( { key: 'slider', message: 'スライダーを変えたときは、先に「下書き保存」してください。画像を選ぶ欄が、そのスライダー用に切り替わります。' } );
+			errors.push( { key: 'slider', message: 'スライダーを選び直したので、先に「下書き保存」してください。画像枠が変わります。画像は保存後の画面で選んでください。' } );
 		}
 
 		Array.prototype.forEach.call( document.querySelectorAll( '.etss-slot' ), function ( slot ) {
@@ -314,12 +340,20 @@
 
 	// 書き戻し・「今すぐ表示する」・「表示終了日時を空にする」。
 	if ( startInput ) {
-		startInput.addEventListener( 'input', updateWritebacks );
-		startInput.addEventListener( 'change', updateWritebacks );
+		startInput.addEventListener( 'input', function () {
+			updateWritebacks( false );
+		} );
+		startInput.addEventListener( 'change', function () {
+			updateWritebacks( true );
+		} );
 	}
 	if ( endInput ) {
-		endInput.addEventListener( 'input', updateWritebacks );
-		endInput.addEventListener( 'change', updateWritebacks );
+		endInput.addEventListener( 'input', function () {
+			updateWritebacks( false );
+		} );
+		endInput.addEventListener( 'change', function () {
+			updateWritebacks( true );
+		} );
 	}
 
 	var nowButton = document.getElementById( 'etss-start-now' );
@@ -327,7 +361,7 @@
 		nowButton.addEventListener( 'click', function () {
 			startInput.value = toInputValue( nowLocalMs() );
 			clearFieldError( 'start' );
-			updateWritebacks();
+			updateWritebacks( true );
 			startInput.focus();
 		} );
 	}
@@ -337,7 +371,7 @@
 		clearButton.addEventListener( 'click', function () {
 			endInput.value = '';
 			clearFieldError( 'end' );
-			updateWritebacks();
+			updateWritebacks( true );
 			endInput.focus();
 		} );
 	}
@@ -379,6 +413,7 @@
 		var image = preview ? preview.querySelector( 'img' ) : null;
 		var meta = slot.querySelector( '.etss-slot__meta' );
 		var key = 'image-' + slot.getAttribute( 'data-slot' );
+		var live = slot.querySelector( '.etss-slot__live' );
 		var frame = null;
 
 		function render( attachment ) {
@@ -405,6 +440,10 @@
 				missing.hidden = true;
 			}
 			clearFieldError( key );
+
+			if ( live ) {
+				live.textContent = hasImage ? slot.getAttribute( 'data-label-select' ).replace( /選ぶ$/, '選びました' ) + '：' + ( attachment.filename || '' ) : slot.getAttribute( 'data-label-remove' ).replace( /外す$/, '外しました' );
+			}
 		}
 
 		select.addEventListener( 'click', function () {
@@ -450,5 +489,5 @@
 	Array.prototype.forEach.call( document.querySelectorAll( '.etss-slot' ), initSlot );
 
 	bindServerErrors();
-	updateWritebacks();
+	updateWritebacks( false );
 }() );

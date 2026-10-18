@@ -359,7 +359,8 @@ class ETSS_Slider_Admin {
 
 		$found = array();
 		foreach ( $query->posts as $page ) {
-			if ( has_block( self::BLOCK_NAME, $page ) && self::content_uses_slider( $page->post_content, $slider_id ) ) {
+			// 読める権限のない投稿は出さない（タイトルの漏れを防ぐ）。
+			if ( current_user_can( 'read_post', $page->ID ) && has_block( self::BLOCK_NAME, $page ) && self::content_uses_slider( $page->post_content, $slider_id ) ) {
 				$found[] = $page;
 			}
 		}

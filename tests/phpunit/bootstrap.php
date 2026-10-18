@@ -85,6 +85,190 @@ function esc_html( $text ) {
 	return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
 }
 
+/**
+ * 投稿・メタの最小スタブの状態を空にする。保存フックのテストの setUp() から呼ぶ。
+ *
+ * @return void
+ */
+function etss_test_reset_wp() {
+	$GLOBALS['etss_test_meta']   = array();
+	$GLOBALS['etss_test_posts']  = array();
+	$GLOBALS['etss_test_attach'] = array();
+	$GLOBALS['etss_test_can']    = true;
+	$_POST                       = array();
+}
+
+/**
+ * get_post_meta() の最小スタブ。
+ *
+ * @param int    $post_id 投稿 ID。
+ * @param string $key     キー。
+ * @param bool   $single  1件だけ返すか。
+ * @return mixed
+ */
+function get_post_meta( $post_id, $key, $single = false ) {
+	$values = isset( $GLOBALS['etss_test_meta'][ $post_id ][ $key ] ) ? $GLOBALS['etss_test_meta'][ $post_id ][ $key ] : array();
+	if ( $single ) {
+		return $values ? $values[0] : '';
+	}
+	return $values;
+}
+
+/**
+ * update_post_meta() の最小スタブ。
+ *
+ * @param int    $post_id 投稿 ID。
+ * @param string $key     キー。
+ * @param mixed  $value   値。
+ * @return bool
+ */
+function update_post_meta( $post_id, $key, $value ) {
+	$GLOBALS['etss_test_meta'][ $post_id ][ $key ] = array( $value );
+	return true;
+}
+
+/**
+ * delete_post_meta() の最小スタブ。
+ *
+ * @param int    $post_id 投稿 ID。
+ * @param string $key     キー。
+ * @return bool
+ */
+function delete_post_meta( $post_id, $key ) {
+	unset( $GLOBALS['etss_test_meta'][ $post_id ][ $key ] );
+	return true;
+}
+
+/**
+ * get_post() の最小スタブ（etss_test_posts に入れたオブジェクトを返す）。
+ *
+ * @param int $post_id 投稿 ID。
+ * @return object|null
+ */
+function get_post( $post_id ) {
+	return isset( $GLOBALS['etss_test_posts'][ $post_id ] ) ? $GLOBALS['etss_test_posts'][ $post_id ] : null;
+}
+
+/**
+ * get_post_status() のスタブ。
+ *
+ * @param int $post_id 投稿 ID。
+ * @return string|false
+ */
+function get_post_status( $post_id ) {
+	$post = get_post( $post_id );
+	return $post ? $post->post_status : false;
+}
+
+/**
+ * get_post_type() のスタブ。
+ *
+ * @param int $post_id 投稿 ID。
+ * @return string|false
+ */
+function get_post_type( $post_id ) {
+	$post = get_post( $post_id );
+	return $post ? $post->post_type : false;
+}
+
+/**
+ * wp_timezone() のスタブ（UTC）。
+ *
+ * @return DateTimeZone
+ */
+function wp_timezone() {
+	return new DateTimeZone( 'UTC' );
+}
+
+/**
+ * wp_verify_nonce() のスタブ。値が `good` のときだけ通す。
+ *
+ * @param string $nonce  nonce。
+ * @return bool
+ */
+function wp_verify_nonce( $nonce ) {
+	return 'good' === $nonce;
+}
+
+/**
+ * sanitize_text_field() のスタブ。
+ *
+ * @param string $text 文字列。
+ * @return string
+ */
+function sanitize_text_field( $text ) {
+	return trim( (string) $text );
+}
+
+/**
+ * wp_unslash() のスタブ（テストの値にスラッシュは入れない）。
+ *
+ * @param mixed $value 値。
+ * @return mixed
+ */
+function wp_unslash( $value ) {
+	return $value;
+}
+
+/**
+ * wp_is_post_autosave() のスタブ。
+ *
+ * @return bool
+ */
+function wp_is_post_autosave() {
+	return false;
+}
+
+/**
+ * wp_is_post_revision() のスタブ。
+ *
+ * @return bool
+ */
+function wp_is_post_revision() {
+	return false;
+}
+
+/**
+ * current_user_can() のスタブ。
+ *
+ * @return bool
+ */
+function current_user_can() {
+	return $GLOBALS['etss_test_can'];
+}
+
+/**
+ * wp_attachment_is_image() のスタブ（etss_test_attach に入れた ID だけ画像）。
+ *
+ * @param int $id 添付ファイルの ID。
+ * @return bool
+ */
+function wp_attachment_is_image( $id ) {
+	return isset( $GLOBALS['etss_test_attach'][ $id ] );
+}
+
+/**
+ * wp_get_attachment_metadata() のスタブ。
+ *
+ * @param int $id 添付ファイルの ID。
+ * @return array|false
+ */
+function wp_get_attachment_metadata( $id ) {
+	return isset( $GLOBALS['etss_test_attach'][ $id ] ) ? $GLOBALS['etss_test_attach'][ $id ] : false;
+}
+
+/**
+ * current_time() のスタブ。
+ *
+ * @param string $type 種類。
+ * @param bool   $gmt  GMT か。
+ * @return string
+ */
+function current_time( $type, $gmt = false ) {
+	unset( $type );
+	return gmdate( 'Y-m-d H:i:s', 1000000 + ( $gmt ? 0 : 0 ) );
+}
+
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-schedule.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-link.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-loop.php';
@@ -96,3 +280,4 @@ require_once dirname( __DIR__, 2 ) . '/inc/class-etss-validator.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-display.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-options.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slider-admin.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slide-admin.php';

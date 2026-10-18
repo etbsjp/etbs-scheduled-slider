@@ -59,6 +59,7 @@ class ETSS_Slide_Admin {
 		add_action( 'admin_notices', array( __CLASS__, 'render_notices' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 		add_filter( 'post_updated_messages', array( __CLASS__, 'post_updated_messages' ) );
+		add_filter( 'title_edit_pre', array( __CLASS__, 'restore_rejected_title' ), 10, 2 );
 
 		// 保存。
 		add_filter( 'wp_insert_post_data', array( __CLASS__, 'filter_insert_post_data' ), 99, 2 );
@@ -104,7 +105,7 @@ class ETSS_Slide_Admin {
 	}
 
 	/**
-	 * 公開ボックスのボタン名「公開」を、スライド用の言葉にする。
+	 * 公開ボックスの「公開」「公開済み」を、スライド用の言葉にする。
 	 *
 	 * @param string $translation 翻訳後の文字列。
 	 * @param string $text        翻訳前の文字列。
@@ -112,7 +113,16 @@ class ETSS_Slide_Admin {
 	 * @return string 文字列。
 	 */
 	public static function relabel_publish_button( $translation, $text, $domain ) {
-		return ( 'default' === $domain && 'Publish' === $text ) ? '表示に登録' : $translation;
+		if ( 'default' !== $domain ) {
+			return $translation;
+		}
+
+		$labels = array(
+			'Publish'   => '表示に登録',
+			'Published' => '表示に登録済み',
+		);
+
+		return isset( $labels[ $text ] ) ? $labels[ $text ] : $translation;
 	}
 
 	/**
@@ -124,6 +134,23 @@ class ETSS_Slide_Admin {
 	 */
 	public static function title_placeholder( $text, $post ) {
 		return ( $post && ETSS_Post_Types::SLIDE === $post->post_type ) ? '代替テキスト（画像の告知文）を入力' : $text;
+	}
+
+	/**
+	 * 変更を保存しなかった直後の画面（D7）で、タイトル欄に、入力されていたタイトルを戻す。
+	 *
+	 * @param string $title   編集画面に出すタイトル。
+	 * @param int    $post_id 投稿 ID。
+	 * @return string タイトル。
+	 */
+	public static function restore_rejected_title( $title, $post_id ) {
+		if ( ! self::is_slide_edit_screen() ) {
+			return $title;
+		}
+
+		$last = self::read_last_errors( (int) $post_id );
+
+		return ( $last['protected'] && isset( $last['input']['title'] ) && is_string( $last['input']['title'] ) ) ? $last['input']['title'] : $title;
 	}
 
 	/**
@@ -217,7 +244,7 @@ class ETSS_Slide_Admin {
 	 * @param string $title            保存しようとしているタイトル。
 	 * @param string $requested_status 保存しようとしている投稿ステータス。
 	 * @param array  $meta_input       wp_insert_post() に渡されたメタ（`meta_input`）。
-	 * @return array `result`（validate_slide の結果）・`decision`・`from_form`・`input`。
+	 * @return array `result`（validate_slide の結果）・`decision`・`from_form`・`input`・`title`・`snapshot`（保存前のメタ）。
 	 */
 	private static function get_entry( $post_id, $title, $requested_status, array $meta_input = array() ) {
 		$post_id = (int) $post_id;
@@ -260,6 +287,8 @@ class ETSS_Slide_Admin {
 			'decision'  => $decision,
 			'from_form' => $from_form,
 			'input'     => $input,
+			'title'     => (string) $title,
+			'snapshot'  => self::snapshot_meta( $post_id ),
 		);
 
 		self::$entries[ $post_id ] = $entry;
@@ -282,6 +311,9 @@ class ETSS_Slide_Admin {
 			return $data;
 		}
 
+		// 公開状態の「非公開」・パスワードは使わない（検査を通らずに公開できる経路になるため）。
+		$data = self::normalize_visibility( $data );
+
 		// 公開で保存しようとしているときだけ見る（下書き・ゴミ箱などは、そのまま通す）。
 		$requested = isset( $data['post_status'] ) ? $data['post_status'] : '';
 		if ( ! in_array( $requested, array( 'publish', 'future' ), true ) ) {
@@ -292,13 +324,50 @@ class ETSS_Slide_Admin {
 		$meta_input = ( isset( $postarr['meta_input'] ) && is_array( $postarr['meta_input'] ) ) ? $postarr['meta_input'] : array();
 		$title      = isset( $data['post_title'] ) ? $data['post_title'] : '';
 		$entry      = self::get_entry( $post_id, $title, $requested, $meta_input );
+		$current    = ( 'reject' === $entry['decision'] ) ? get_post( $post_id ) : null;
 
-		switch ( $entry['decision'] ) {
+		return self::apply_decision( $data, $requested, $entry['decision'], $current, current_time( 'mysql' ), current_time( 'mysql', true ) );
+	}
+
+	/**
+	 * 公開状態の「非公開（private）」とパスワード保護を外す。公開状態は「公開」だけを使うため。
+	 *
+	 * @param array $data 保存する投稿データ。
+	 * @return array 保存する投稿データ。
+	 */
+	public static function normalize_visibility( array $data ) {
+		if ( isset( $data['post_status'] ) && 'private' === $data['post_status'] ) {
+			$data['post_status'] = 'publish';
+		}
+		$data['post_password'] = '';
+
+		return $data;
+	}
+
+	/**
+	 * 検査の結果に合わせて、保存する投稿データを直す。
+	 *
+	 * - `publish`: `future` は `publish` にし、投稿日時を今にする
+	 * - `draft`: 下書きに落とす
+	 * - `reject`: 変更を保存しない。タイトル・スラッグ・表示順・状態を、保存済みのものに戻す
+	 *
+	 * reject で戻す項目は、supports に項目を足したとき（本文・抜粋など）に、ここへ足す必要がある。
+	 *
+	 * @param array         $data      保存する投稿データ。
+	 * @param string        $requested 保存しようとしていた投稿ステータス。
+	 * @param string        $decision  ETSS_Validator::decide() の結果。
+	 * @param object|null   $current   保存済みの投稿（reject のときに戻す元）。
+	 * @param string        $now_local 現在時刻（サイトの時計）。
+	 * @param string        $now_gmt   現在時刻（GMT）。
+	 * @return array 保存する投稿データ。
+	 */
+	public static function apply_decision( array $data, $requested, $decision, $current, $now_local, $now_gmt ) {
+		switch ( $decision ) {
 			case 'publish':
 				if ( 'future' === $requested ) {
 					$data['post_status']   = 'publish';
-					$data['post_date']     = current_time( 'mysql' );
-					$data['post_date_gmt'] = current_time( 'mysql', true );
+					$data['post_date']     = $now_local;
+					$data['post_date_gmt'] = $now_gmt;
 				}
 				break;
 
@@ -307,8 +376,6 @@ class ETSS_Slide_Admin {
 				break;
 
 			case 'reject':
-				// 変更を保存しない。保存済みの内容と状態に戻す。
-				$current = get_post( $post_id );
 				if ( $current ) {
 					$data['post_title']  = $current->post_title;
 					$data['post_name']   = $current->post_name;
@@ -336,7 +403,8 @@ class ETSS_Slide_Admin {
 			return;
 		}
 
-		// 保存の直前に作った結果があれば使い回す（新規で ID が未確定だったときは 0 の枠にある）。
+		// 保存の直前に作った結果があれば使い回す。0 の枠は、新規で ID が未確定だったときのもの。
+		// 1回の保存で1件の投稿だけを作る前提（一括で複数を作る経路は想定しない）。複数を作るなら ID ごとの枠に直すこと。
 		if ( isset( self::$entries[ $post_id ] ) ) {
 			$entry = self::$entries[ $post_id ];
 		} elseif ( isset( self::$entries[0] ) ) {
@@ -348,6 +416,10 @@ class ETSS_Slide_Admin {
 
 		// 編集画面を通っていない保存は、値を書き換えない。下書きに落とした・保存を断ったときの理由だけ残す。
 		if ( ! $entry['from_form'] ) {
+			if ( 'reject' === $entry['decision'] ) {
+				// meta_input は save_post より前に書かれるので、保存済みの値に戻す。
+				self::restore_meta( $post_id, $entry['snapshot'] );
+			}
 			if ( in_array( $entry['decision'], array( 'draft', 'reject' ), true ) ) {
 				self::store_last_errors( $post_id, $entry );
 			}
@@ -355,6 +427,7 @@ class ETSS_Slide_Admin {
 		}
 
 		if ( 'reject' === $entry['decision'] ) {
+			self::restore_meta( $post_id, $entry['snapshot'] );
 			self::store_last_errors( $post_id, $entry );
 			return;
 		}
@@ -369,6 +442,43 @@ class ETSS_Slide_Admin {
 		update_post_meta( $post_id, ETSS_Meta::END, $values['end'] );
 
 		self::store_last_errors( $post_id, $entry );
+	}
+
+	/**
+	 * スライドの値のメタを、いまの状態で控える（reject のときに戻すため）。
+	 *
+	 * @param int $post_id 投稿 ID。
+	 * @return array メタのキー => 値の配列（無ければ空配列）。
+	 */
+	private static function snapshot_meta( $post_id ) {
+		$snapshot = array();
+		foreach ( array( ETSS_Meta::SLIDER_ID, ETSS_Meta::IMAGES, ETSS_Meta::URL, ETSS_Meta::START, ETSS_Meta::END ) as $key ) {
+			$snapshot[ $key ] = $post_id > 0 ? get_post_meta( $post_id, $key, false ) : array();
+		}
+
+		return $snapshot;
+	}
+
+	/**
+	 * 控えておいたメタに戻す（無かったものは消す）。
+	 *
+	 * @param int   $post_id  投稿 ID。
+	 * @param array $snapshot snapshot_meta() の結果。
+	 * @return void
+	 */
+	private static function restore_meta( $post_id, array $snapshot ) {
+		foreach ( $snapshot as $key => $values ) {
+			self::update_or_delete( $post_id, $key, $values ? $values[0] : null );
+		}
+	}
+
+	/**
+	 * テスト用: 1回の保存で使い回す結果を空にする。
+	 *
+	 * @return void
+	 */
+	public static function reset_entries() {
+		self::$entries = array();
 	}
 
 	/**
@@ -415,7 +525,8 @@ class ETSS_Slide_Admin {
 
 		// 下書きに落としたとき・変更を保存しなかったときは、画面に入力を戻せるよう送信値も残す（打った値を失わないため）。
 		if ( $errors && $entry['from_form'] ) {
-			$stored['input'] = $entry['input'];
+			$stored['input']          = $entry['input'];
+			$stored['input']['title'] = $entry['title'];
 		}
 
 		update_post_meta( $post_id, ETSS_Meta::LAST_ERRORS, $stored );
@@ -463,7 +574,7 @@ class ETSS_Slide_Admin {
 			3  => 'カスタムフィールドを削除しました。',
 			4  => 'スライドを更新しました。',
 			5  => 'スライドを以前の版に戻しました。',
-			6  => 'スライドを表示に登録しました。表示開始日時になると、スライダーに表示されます。',
+			6  => '表示に登録しました。表示開始日時から、スライダーに表示されます。',
 			7  => 'スライドを保存しました。',
 			8  => 'スライドを保存しました。',
 			9  => 'スライドを保存しました。',
@@ -543,6 +654,11 @@ class ETSS_Slide_Admin {
 	 */
 	private static function field_attrs( $key, array $errors ) {
 		$attrs = ' aria-describedby="etss-desc-' . esc_attr( $key ) . ' etss-error-' . esc_attr( $key ) . '"';
+
+		// 画像枠のボタンには aria-invalid を付けられない（無効な ARIA）。赤枠は is-invalid クラスで出す。
+		if ( 0 === strpos( $key, 'image-' ) ) {
+			return isset( $errors[ $key ] ) ? $attrs . ' class="button etss-slot__select is-invalid"' : $attrs . ' class="button etss-slot__select"';
+		}
 
 		return isset( $errors[ $key ] ) ? $attrs . ' aria-invalid="true"' : $attrs;
 	}
@@ -625,7 +741,11 @@ class ETSS_Slide_Admin {
 
 		$choices = array();
 		foreach ( $posts as $slider ) {
-			$choices[ (int) $slider->ID ] = '' !== trim( $slider->post_title ) ? $slider->post_title : '（名前なし #' . $slider->ID . '）';
+			$template = ETSS_Templates::for_slider( $slider->ID );
+			$name     = '' !== trim( $slider->post_title ) ? $slider->post_title : '（名前なし）';
+
+			// 同じ名前のスライダーを見分けられるよう、ひな形名と ID を添える。
+			$choices[ (int) $slider->ID ] = $name . '（' . ( $template ? $template['label'] : 'ひな形不明' ) . '・#' . $slider->ID . '）';
 		}
 
 		return $choices;
@@ -672,7 +792,7 @@ class ETSS_Slide_Admin {
 			);
 		}
 		echo '</p>';
-		echo '<p class="etss-slider-change-note" id="etss-slider-change-note" role="status" hidden>スライダーを選び直しました。保存すると画像枠が変わります。画像は、保存したあとの画面で選んでください。</p>';
+		echo '<p class="etss-slider-change-note" id="etss-slider-change-note" role="status" hidden>スライダーを選び直しました。「下書き保存」すると画像枠が変わります。画像は保存後の画面で選んでください。</p>';
 		self::render_field_error( 'slider', $errors );
 		echo '</div>';
 
@@ -766,9 +886,10 @@ class ETSS_Slide_Admin {
 
 		// 選ぶ・変更・外す。
 		printf( '<input type="hidden" name="%1$s[images][%2$s]" value="%3$d" class="etss-slot__input">', esc_attr( self::FIELD ), esc_attr( $slot['id'] ), absint( $attachment_id ) );
+		echo '<p class="screen-reader-text etss-slot__live" aria-live="polite"></p>';
 		echo '<p class="etss-slot__buttons">';
 		printf(
-			'<button type="button" class="button etss-slot__select" id="etss-field-%1$s"%2$s>%3$s</button> ',
+			'<button type="button" id="etss-field-%1$s"%2$s>%3$s</button> ',
 			esc_attr( $key ),
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- field_attrs() 内でエスケープ済み。
 			self::field_attrs( $key, $errors ),
@@ -844,7 +965,7 @@ class ETSS_Slide_Admin {
 		);
 		echo ' <button type="button" class="button" id="etss-start-now">今すぐ表示する</button>';
 		echo '</div>';
-		printf( '<p class="etss-writeback" id="etss-start-writeback" aria-live="polite">%s</p>', esc_html( null === $start_ts ? '' : ETSS_Display::describe_start( $start_ts, $now, $timezone ) ) );
+		printf( '<p class="etss-writeback" id="etss-start-writeback">%s</p><p class="screen-reader-text" id="etss-start-live" aria-live="polite"></p>', esc_html( null === $start_ts ? '' : ETSS_Display::describe_start( $start_ts, $now, $timezone ) ) );
 		echo '<p class="description" id="etss-desc-start">この日時になると、スライダーに表示されます。「今すぐ表示する」を押すと、いまの日時を入力します。</p>';
 		self::render_field_error( 'start', $errors );
 		echo '</div>';
@@ -861,7 +982,7 @@ class ETSS_Slide_Admin {
 		);
 		echo ' <button type="button" class="button-link" id="etss-end-clear">表示終了日時を空にする</button>';
 		echo '</div>';
-		printf( '<p class="etss-writeback" id="etss-end-writeback" aria-live="polite">%s</p>', esc_html( ETSS_Display::describe_end( null === $end_ts ? 0 : $end_ts, $now, $timezone ) ) );
+		printf( '<p class="etss-writeback" id="etss-end-writeback">%s</p><p class="screen-reader-text" id="etss-end-live" aria-live="polite"></p>', esc_html( ETSS_Display::describe_end( null === $end_ts ? 0 : $end_ts, $now, $timezone ) ) );
 		echo '<p class="description" id="etss-desc-end">この日時になると、表示から消えます。空欄なら消えません。</p>';
 		self::render_field_error( 'end', $errors );
 		echo '</div>';
