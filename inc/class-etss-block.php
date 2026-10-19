@@ -86,7 +86,7 @@ class ETSS_Block {
 	}
 
 	/**
-	 * ブロックの描画（フックの入口）。現在時刻はここで読む。
+	 * ブロックの描画（フックの入口）。現在時刻と、日時プレビュー中の時刻はここで読む。
 	 *
 	 * @param array $attributes ブロックの属性（`sliderId`）。
 	 * @return string HTML。出すものが無ければ空文字。
@@ -104,17 +104,18 @@ class ETSS_Block {
 			return '';
 		}
 
-		return self::render_slider( $slider_id, time() );
+		return self::render_slider( $slider_id, time(), ETSS_Preview::at() );
 	}
 
 	/**
 	 * スライダー1つを描画する。
 	 *
-	 * @param int $slider_id スライダーの投稿 ID。
-	 * @param int $now       現在時刻（UTC の Unix 秒）。
+	 * @param int      $slider_id スライダーの投稿 ID。
+	 * @param int      $now       現在時刻（UTC の Unix 秒）。キャッシュの保存期間は、プレビュー中もこの時刻で決める。
+	 * @param int|null $preview_at 日時プレビューの時刻（UTC の Unix 秒）。あればその時刻の並びを、下書きも含めて出す。通常は null。
 	 * @return string HTML。出すものが無ければ空文字。
 	 */
-	public static function render_slider( $slider_id, $now ) {
+	public static function render_slider( $slider_id, $now, $preview_at = null ) {
 		$slider_id = (int) $slider_id;
 
 		// スライダーの変更・スライドの追加で捨てられるよう、何も出さないときも目印は付ける。
@@ -130,11 +131,15 @@ class ETSS_Block {
 			return '';
 		}
 
-		$slides = self::load_slides( $slider_id, $now );
+		// プレビュー中は、プレビュー時刻と現在時刻のどちらでも終わっていないスライドを、下書きも含めて読む。
+		$is_preview = null !== $preview_at;
+		$view_at    = $is_preview ? (int) $preview_at : (int) $now;
+		$slides     = self::load_slides( $slider_id, $is_preview ? min( $view_at, (int) $now ) : (int) $now, $is_preview );
 
-		// 次の切替時刻までをページキャッシュの保存期間にする。
-		$max_ttl = (int) apply_filters( 'etss_max_ttl', ETSS_Schedule::DEFAULT_MAX_TTL );
-		ETSS_Cache::set_ttl( ETSS_Schedule::cache_ttl( ETSS_Schedule::next_switch_time( $slides, $now ), $now, $max_ttl ) );
+		// 次の切替時刻までをページキャッシュの保存期間にする。プレビュー中も、公開状態のスライドと現在時刻で決める。
+		$max_ttl   = (int) apply_filters( 'etss_max_ttl', ETSS_Schedule::DEFAULT_MAX_TTL );
+		$published = $is_preview ? self::only_published( $slides ) : $slides;
+		ETSS_Cache::set_ttl( ETSS_Schedule::cache_ttl( ETSS_Schedule::next_switch_time( $published, $now ), $now, $max_ttl ) );
 
 		// 画像の読み出し（投稿・メタ）をまとめて済ませる。スライドの数だけ問い合わせないため。
 		$attachment_ids = array();
@@ -145,7 +150,7 @@ class ETSS_Block {
 			_prime_post_caches( array_values( array_unique( array_filter( $attachment_ids ) ) ), false, true );
 		}
 
-		$selected = ETSS_Render::select_slides( $slides, $slider_id, $template['slots'], $now, 'wp_attachment_is_image' );
+		$selected = ETSS_Render::select_slides( $slides, $slider_id, $template['slots'], $view_at, 'wp_attachment_is_image', $is_preview );
 		if ( ! $selected ) {
 			return '';
 		}
@@ -188,15 +193,16 @@ class ETSS_Block {
 	/**
 	 * スライダーに属する公開状態のスライドを読み出す。終了済みは問い合わせの段階で外す。件数の上限は付けない。
 	 *
-	 * @param int $slider_id スライダーの投稿 ID。
-	 * @param int $now       現在時刻（UTC の Unix 秒）。
+	 * @param int  $slider_id           スライダーの投稿 ID。
+	 * @param int  $now                 この時刻より後に終わるスライドだけを読む（UTC の Unix 秒）。
+	 * @param bool $include_unpublished true なら、下書きなども読む（日時プレビュー用。ゴミ箱は含めない）。
 	 * @return array スライドの配列（`id`・`title`・`post_status`・`menu_order`・`slider_id`・`images`・`url`・`start`・`end`）。
 	 */
-	public static function load_slides( $slider_id, $now ) {
+	public static function load_slides( $slider_id, $now, $include_unpublished = false ) {
 		$posts = get_posts(
 			array(
 				'post_type'      => ETSS_Post_Types::SLIDE,
-				'post_status'    => 'publish',
+				'post_status'    => $include_unpublished ? ETSS_Render::PREVIEW_STATUSES : 'publish',
 				'posts_per_page' => -1,
 				'no_found_rows'  => true,
 				'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- スライダーと終了時刻で絞るのに必要。
@@ -245,6 +251,23 @@ class ETSS_Block {
 		}
 
 		return $slides;
+	}
+
+	/**
+	 * スライドの配列から、公開状態のものだけを残す。
+	 *
+	 * @param array $slides load_slides() の結果。
+	 * @return array 公開状態のスライド。
+	 */
+	private static function only_published( array $slides ) {
+		return array_values(
+			array_filter(
+				$slides,
+				static function ( $slide ) {
+					return 'publish' === $slide['post_status'];
+				}
+			)
+		);
 	}
 
 	/**

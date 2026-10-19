@@ -100,6 +100,7 @@ function etss_test_reset_wp() {
 	$GLOBALS['etss_test_posts']          = array();
 	$GLOBALS['etss_test_attach']         = array();
 	$GLOBALS['etss_test_can']            = true;
+	$GLOBALS['etss_test_logged_in']      = true;
 	$GLOBALS['etss_test_autosave']       = false;
 	$_POST                               = array();
 	$_GET                                = array();
@@ -292,6 +293,15 @@ function remove_query_arg( $key, $url ) {
 }
 
 /**
+ * is_user_logged_in() のスタブ。
+ *
+ * @return bool
+ */
+function is_user_logged_in() {
+	return $GLOBALS['etss_test_logged_in'];
+}
+
+/**
  * current_user_can() のスタブ。
  *
  * @return bool
@@ -414,3 +424,4 @@ require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slider-admin.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slide-admin.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-render.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-block.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-preview.php';
