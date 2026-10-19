@@ -337,6 +337,32 @@ class ETSS_Slider_Admin {
 	}
 
 	/**
+	 * このスライダーを置いているページのうち、公開されていて開けるものの URL を返す（日時プレビューの行き先）。
+	 *
+	 * 1つのリクエストの中では、スライダーごとに1回だけ探す。
+	 *
+	 * @param int $slider_id スライダーの投稿 ID。
+	 * @return string URL。見つからなければ空文字。
+	 */
+	public static function placement_url( $slider_id ) {
+		static $cache = array();
+
+		$slider_id = (int) $slider_id;
+		if ( ! isset( $cache[ $slider_id ] ) ) {
+			$cache[ $slider_id ] = '';
+			foreach ( self::find_placements( $slider_id ) as $page ) {
+				// 下書き・承認待ち・予約のページは、そのままの URL では開けない。
+				if ( in_array( $page->post_status, array( 'publish', 'private' ), true ) ) {
+					$cache[ $slider_id ] = (string) get_permalink( $page );
+					break;
+				}
+			}
+		}
+
+		return $cache[ $slider_id ];
+	}
+
+	/**
 	 * このスライダーのブロックを本文に置いている投稿を探す。
 	 *
 	 * 本文にブロック名を含むものを検索し、`has_block()` で絞り、ブロックの属性（sliderId）で、このスライダーのものだけにする。

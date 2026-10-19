@@ -28,6 +28,23 @@
 	margin: 4px 0 0;
 }
 
+/* 「この時刻の表示を見る」リンク（日時プレビュー） */
+.etss-preview-links {
+	margin: 16px 0 20px;
+}
+
+.etss-preview-links__list {
+	margin: 0 0 4px;
+}
+
+.etss-preview-links__list li {
+	margin: 0 0 4px;
+}
+
+.etss-preview-links .description {
+	margin: 0;
+}
+
 /* エラー・警告 */
 .etss-field-error,
 .etss-slot__missing {

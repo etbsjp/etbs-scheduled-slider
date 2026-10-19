@@ -29,6 +29,11 @@ class ETSS_Render {
 	const BLOCK_ID_PREFIX = 'etss-';
 
 	/**
+	 * 日時プレビュー（docs/spec.md §7）で、下書きも含めて出すときの公開状態。ゴミ箱・自動下書き・リビジョンは含めない。
+	 */
+	const PREVIEW_STATUSES = array( 'publish', 'draft', 'pending', 'private', 'future' );
+
+	/**
 	 * VK のスライダーの `blockId` を作る。
 	 *
 	 * VK の JS は `.vk_slider_<blockId>` で Swiper を起動するので、外枠の class と `data-vkb-slider` の `blockId` は必ずこの値で揃える。
@@ -56,10 +61,12 @@ class ETSS_Render {
 	 * @param array    $slots    ひな形の画像枠（枠 ID => 定義）。
 	 * @param int      $now      現在時刻（UTC の Unix 秒）。
 	 * @param callable $is_image `callable( int $attachment_id ): bool`。画像の添付ファイルとして実在するか。
+	 * @param bool     $include_unpublished true なら、公開状態が下書きなどのスライドも対象にする（日時プレビュー用。表示期間などの他の条件は同じ）。
 	 * @return bool 出してよければ true。
 	 */
-	public static function is_displayable( array $slide, $slider_id, array $slots, $now, $is_image ) {
-		if ( ( isset( $slide['post_status'] ) ? $slide['post_status'] : '' ) !== 'publish' ) {
+	public static function is_displayable( array $slide, $slider_id, array $slots, $now, $is_image, $include_unpublished = false ) {
+		$post_status = isset( $slide['post_status'] ) ? $slide['post_status'] : '';
+		if ( $include_unpublished ? ! in_array( $post_status, self::PREVIEW_STATUSES, true ) : 'publish' !== $post_status ) {
 			return false;
 		}
 
@@ -119,13 +126,14 @@ class ETSS_Render {
 	 * @param array    $slots     ひな形の画像枠。
 	 * @param int      $now       現在時刻（UTC の Unix 秒）。
 	 * @param callable $is_image  画像として実在するかを返す関数。
+	 * @param bool     $include_unpublished true なら、下書きなども対象にする（日時プレビュー用）。
 	 * @return array 並べたスライドの配列。
 	 */
-	public static function select_slides( array $slides, $slider_id, array $slots, $now, $is_image ) {
+	public static function select_slides( array $slides, $slider_id, array $slots, $now, $is_image, $include_unpublished = false ) {
 		$displayable = array();
 
 		foreach ( $slides as $slide ) {
-			if ( self::is_displayable( $slide, $slider_id, $slots, $now, $is_image ) ) {
+			if ( self::is_displayable( $slide, $slider_id, $slots, $now, $is_image, $include_unpublished ) ) {
 				$displayable[] = $slide;
 			}
 		}

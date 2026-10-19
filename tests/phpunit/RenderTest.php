@@ -220,6 +220,117 @@ class RenderTest extends TestCase {
 	}
 
 	/**
+	 * 日時プレビュー用に、下書きなども出す指定のテスト（表示期間などの他の条件は変わらない）。
+	 *
+	 * @return void
+	 */
+	public function test_is_displayable_include_unpublished() {
+		$callback = array( __CLASS__, 'is_image' );
+		$slots    = $this->slots();
+
+		$test_cases = array(
+			array(
+				'test_condition_name' => '下書きは、既定では出さない',
+				'slide'               => $this->slide( array( 'post_status' => 'draft' ) ),
+				'include'             => false,
+				'expected'            => false,
+			),
+			array(
+				'test_condition_name' => '下書きは、プレビューでは出す',
+				'slide'               => $this->slide( array( 'post_status' => 'draft' ) ),
+				'include'             => true,
+				'expected'            => true,
+			),
+			array(
+				'test_condition_name' => '承認待ち・非公開・予約も、プレビューでは出す',
+				'slide'               => $this->slide( array( 'post_status' => 'pending' ) ),
+				'include'             => true,
+				'expected'            => true,
+			),
+			array(
+				'test_condition_name' => 'ゴミ箱は、プレビューでも出さない',
+				'slide'               => $this->slide( array( 'post_status' => 'trash' ) ),
+				'include'             => true,
+				'expected'            => false,
+			),
+			array(
+				'test_condition_name' => '自動下書きは、プレビューでも出さない',
+				'slide'               => $this->slide( array( 'post_status' => 'auto-draft' ) ),
+				'include'             => true,
+				'expected'            => false,
+			),
+			array(
+				'test_condition_name' => '下書きでも、表示期間の前なら出さない',
+				'slide'               => $this->slide(
+					array(
+						'post_status' => 'draft',
+						'start'       => self::NOW + 100,
+					)
+				),
+				'include'             => true,
+				'expected'            => false,
+			),
+			array(
+				'test_condition_name' => '下書きでも、画像が足りなければ出さない',
+				'slide'               => $this->slide(
+					array(
+						'post_status' => 'draft',
+						'images'      => array(),
+					)
+				),
+				'include'             => true,
+				'expected'            => false,
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$this->assertSame( $case['expected'], ETSS_Render::is_displayable( $case['slide'], 5, $slots, self::NOW, $callback, $case['include'] ), $case['test_condition_name'] );
+		}
+	}
+
+	/**
+	 * プレビューの時刻で、下書きも含めて選び、表示順に並べるテスト。
+	 *
+	 * @return void
+	 */
+	public function test_select_slides_include_unpublished() {
+		$slides = array(
+			$this->slide(
+				array(
+					'id'         => 1,
+					'menu_order' => 2,
+				)
+			),
+			$this->slide(
+				array(
+					'id'          => 2,
+					'post_status' => 'draft',
+					'menu_order'  => 1,
+				)
+			),
+		);
+
+		$ids = array_column( ETSS_Render::select_slides( $slides, 5, $this->slots(), self::NOW, array( __CLASS__, 'is_image' ), true ), 'id' );
+		$this->assertSame( array( 2, 1 ), $ids, 'プレビュー => 下書きも表示順に入る' );
+
+		$ids = array_column( ETSS_Render::select_slides( $slides, 5, $this->slots(), self::NOW, array( __CLASS__, 'is_image' ) ), 'id' );
+		$this->assertSame( array( 1 ), $ids, '通常 => 公開中だけ' );
+	}
+
+	/**
+	 * ETSS_Block::load_slides() が、プレビューのときだけ下書きなども読むテスト。
+	 *
+	 * @return void
+	 */
+	public function test_load_slides_statuses() {
+		ETSS_Block::load_slides( 5, self::NOW );
+		$this->assertSame( 'publish', $GLOBALS['etss_test_get_posts_args']['post_status'], '通常 => 公開状態だけ' );
+
+		ETSS_Block::load_slides( 5, self::NOW, true );
+		$this->assertSame( array( 'publish', 'draft', 'pending', 'private', 'future' ), $GLOBALS['etss_test_get_posts_args']['post_status'], 'プレビュー => 下書きなども読む（ゴミ箱は読まない）' );
+	}
+
+	/**
 	 * ETSS_Render::select_slides() のテスト（出せるものだけを、表示順に並べる）。
 	 *
 	 * @return void

@@ -40,6 +40,8 @@ require_once __DIR__ . '/class-etss-slider-admin.php';
 require_once __DIR__ . '/class-etss-slide-admin.php';
 // スライドの一覧。
 require_once __DIR__ . '/class-etss-list-admin.php';
+// 日時プレビュー。
+require_once __DIR__ . '/class-etss-preview.php';
 
 /**
  * ひな形を登録する。`etss_register_templates` アクションの中で呼ぶ。
@@ -80,6 +82,7 @@ ETSS_Admin::init();
 ETSS_Slider_Admin::init();
 ETSS_Slide_Admin::init();
 ETSS_List_Admin::init();
+ETSS_Preview::init();
 
 // 停止するときは、このプラグインが付けた目印のページキャッシュを捨てる。LiteSpeed Cache が無くても何も起きない。
 register_deactivation_hook( ETSS_PLUGIN_FILE, array( 'ETSS_Admin', 'on_deactivate' ) );

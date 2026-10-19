@@ -133,3 +133,11 @@
 		flex-basis: auto;
 	}
 }
+
+/* 狭い画面では、リンクの押せる範囲を縦に広げる（指で押しやすくする）。 */
+@media (max-width: 782px) {
+	.etss-summary__actions a {
+		display: inline-block;
+		padding: 8px 0;
+	}
+}
