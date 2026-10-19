@@ -127,7 +127,10 @@ class PreviewTest extends TestCase {
 
 		$this->assertSame( 'プレビュー中: 11/06（金）12:00 の並び（下書きを含む）', ETSS_Preview::banner_text( $at, $now, $this->tokyo() ), '同じ年 => 年なし' );
 		$this->assertSame( 'プレビュー中: 2027/11/06（土）12:00 の並び（下書きを含む）', ETSS_Preview::banner_text( gmmktime( 3, 0, 0, 11, 6, 2027 ), $now, $this->tokyo() ), '年が違う => 年つき' );
-		$this->assertStringContainsString( 'プレビューできません', ETSS_Preview::banner_text( null, $now, $this->tokyo() ), '読めない => 理由を伝える' );
+		$failed = ETSS_Preview::banner_text( null, $now, $this->tokyo() );
+		$this->assertStringContainsString( '日時を読み取れませんでした（今の並びを表示しています）', $failed, '読めない => 起きたこと・今の状態' );
+		$this->assertStringContainsString( 'から開き直してください', $failed, '読めない => 次の操作' );
+		$this->assertStringNotContainsString( 'etss_at', $failed, '内部の引数名は見せない' );
 	}
 
 	/**
@@ -138,7 +141,11 @@ class PreviewTest extends TestCase {
 	public function test_banner_html() {
 		$html = ETSS_Preview::banner_html( '<b>x</b>', '/top/?a=1&b=2' );
 		$this->assertStringContainsString( '&lt;b&gt;x&lt;/b&gt;', $html, '文言はエスケープする' );
-		$this->assertStringContainsString( 'role="status"', $html );
+		$this->assertStringContainsString( 'role="region" aria-label="日時プレビュー"', $html );
+		$this->assertStringNotContainsString( 'role="alert"', $html );
+		$error = ETSS_Preview::banner_html( 'x', '/', true, true );
+		$this->assertStringContainsString( 'role="alert"', $error, '失敗の帯は alert' );
+		$this->assertStringContainsString( '#fcf0f1', $error, '失敗の帯は色を変える' );
 		$this->assertStringContainsString( 'プレビューを終了', $html, '終了のリンクがある' );
 		$this->assertStringNotContainsString( 'position:fixed', $html, '本文の先頭の帯は固定しない' );
 		$this->assertStringContainsString( 'position:fixed', ETSS_Preview::banner_html( 'x', '/', false ), '下に出す帯は固定する' );

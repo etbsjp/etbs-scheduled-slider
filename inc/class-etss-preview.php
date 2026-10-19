@@ -168,7 +168,7 @@ class ETSS_Preview {
 	 */
 	public static function banner_text( $at, $now, DateTimeZone $timezone ) {
 		if ( null === $at ) {
-			return 'プレビューできません: etss_at の日時の形式が正しくありません。例: ?etss_at=2026-11-06T12:00';
+			return '日時を読み取れませんでした（今の並びを表示しています）。スライドの編集画面の「この時刻の表示を見る」や、一覧の「切り替え後の表示を見る」から開き直してください。';
 		}
 
 		return 'プレビュー中: ' . ETSS_Display::format_list_datetime( $at, $now, $timezone ) . ' の並び（下書きを含む）';
@@ -180,16 +180,19 @@ class ETSS_Preview {
 	 * @param string $text     banner_text() の結果。
 	 * @param string $exit_url プレビューを終えるリンク先（`etss_at` を外した URL）。
 	 * @param bool   $at_top   true なら本文の先頭に置く帯。false なら画面の下に固定する帯（テーマが `wp_body_open` を呼ばないとき）。
+	 * @param bool   $is_error true なら、日時を読み取れなかったときの帯（色を変え、読み上げにも知らせる）。
 	 * @return string エスケープ済みの HTML。
 	 */
-	public static function banner_html( $text, $exit_url, $at_top = true ) {
-		// テーマの色に左右されないよう、背景と文字の色を両方とも指定する。
-		$style = 'margin:0;padding:8px 16px;background:#fcf9e8;color:#1d2327;border-bottom:1px solid #dba617;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:left;';
+	public static function banner_html( $text, $exit_url, $at_top = true, $is_error = false ) {
+		// テーマの色に左右されないよう、背景と文字の色を両方とも指定する。失敗の帯は赤系にして、プレビュー中の帯と見分ける。
+		$background = $is_error ? '#fcf0f1' : '#fcf9e8';
+		$border     = $is_error ? '#d63638' : '#dba617';
+		$style      = 'margin:0;padding:8px 16px;background:' . $background . ';color:#1d2327;border-bottom:1px solid ' . $border . ';font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:left;';
 		if ( ! $at_top ) {
-			$style .= 'position:fixed;left:0;right:0;bottom:0;z-index:99999;border-top:1px solid #dba617;border-bottom:0;';
+			$style .= 'position:fixed;left:0;right:0;bottom:0;z-index:99999;border-top:1px solid ' . $border . ';border-bottom:0;';
 		}
 
-		return '<div class="etss-preview-banner" role="status" style="' . esc_attr( $style ) . '">'
+		return '<div class="etss-preview-banner" ' . ( $is_error ? 'role="alert"' : 'role="region" aria-label="日時プレビュー"' ) . ' style="' . esc_attr( $style ) . '">'
 			. '<strong>' . esc_html( $text ) . '</strong>'
 			. ' <a href="' . esc_url( $exit_url ) . '" style="color:#1d2327;text-decoration:underline;">プレビューを終了</a>'
 			. '</div>';
@@ -228,7 +231,8 @@ class ETSS_Preview {
 		$html = self::banner_html(
 			self::banner_text( self::$at, time(), wp_timezone() ),
 			remove_query_arg( self::QUERY_VAR ),
-			$at_top
+			$at_top,
+			null === self::$at
 		);
 
 		echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- banner_html() 内でエスケープ済み。
@@ -275,15 +279,18 @@ class ETSS_Preview {
 				continue;
 			}
 			$time_text = ETSS_Display::format_list_datetime( $timestamp, $now, $timezone );
+			$text      = '表示終了' === $label
+				? '表示終了 ' . $time_text . ' に消えた後の並びを見る'
+				: 'この時刻の表示を見る（表示開始 ' . $time_text . '）';
 			printf(
-				'<li><a href="%1$s" target="_blank" rel="noopener">この時刻の表示を見る（%2$s %3$s）</a></li>',
+				'<li><a href="%1$s" target="_blank" rel="noopener" aria-label="%2$s">%3$s</a></li>',
 				esc_url( self::build_url( $page_url, $timestamp, $timezone ) ),
-				esc_html( $label ),
-				esc_html( $time_text )
+				esc_attr( $text . '（新しいタブで開きます）' ),
+				esc_html( $text )
 			);
 		}
 		echo '</ul>';
-		echo '<p class="description">保存した日時で、スライダーを置いているページを新しいタブで開きます。下書きのスライドも並びに含まれます。</p>';
+		echo '<p class="description">保存した日時で、スライダーを置いているページを新しいタブで開きます。下書きのスライドも並びに含まれます。入力を変えたときは、保存してから開いてください。</p>';
 		echo '</div>';
 	}
 
@@ -303,14 +310,15 @@ class ETSS_Preview {
 
 		$page_url = ETSS_Slider_Admin::placement_url( (int) $slider_id );
 		if ( '' === $page_url ) {
+			echo '<span class="description">公開しているページに置くと、切り替え後の表示を確かめられます。</span>';
 			return;
 		}
 
 		$timezone = wp_timezone();
 		printf(
-			'<a href="%1$s" target="_blank" rel="noopener" aria-label="%2$s">この時刻の表示を見る</a>',
+			'<a href="%1$s" target="_blank" rel="noopener" aria-label="%2$s">切り替え後の表示を見る</a>',
 			esc_url( self::build_url( $page_url, (int) $next_switch, $timezone ) ),
-			esc_attr( 'この時刻の表示を見る（次の切り替え ' . ETSS_Display::format_list_datetime( (int) $next_switch, time(), $timezone ) . '。新しいタブで開きます）' )
+			esc_attr( '切り替え後の表示を見る（次の切り替え ' . ETSS_Display::format_list_datetime( (int) $next_switch, time(), $timezone ) . '。新しいタブで開きます）' )
 		);
 	}
 }
