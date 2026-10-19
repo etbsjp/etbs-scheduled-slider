@@ -181,9 +181,10 @@ class ETSS_Preview {
 	 * @param string $exit_url プレビューを終えるリンク先（`etss_at` を外した URL）。
 	 * @param bool   $at_top   true なら本文の先頭に置く帯。false なら画面の下に固定する帯（テーマが `wp_body_open` を呼ばないとき）。
 	 * @param bool   $is_error true なら、日時を読み取れなかったときの帯（色を変え、読み上げにも知らせる）。
+	 * @param string $list_url 日時を読み取れなかったときに、文言が案内する移動先（スライドの一覧）へのリンク先。権限のある人にだけ渡す。空ならリンクを出さない。
 	 * @return string エスケープ済みの HTML。
 	 */
-	public static function banner_html( $text, $exit_url, $at_top = true, $is_error = false ) {
+	public static function banner_html( $text, $exit_url, $at_top = true, $is_error = false, $list_url = '' ) {
 		// テーマの色に左右されないよう、背景と文字の色を両方とも指定する。失敗の帯は赤系にして、プレビュー中の帯と見分ける。
 		$background = $is_error ? '#fcf0f1' : '#fcf9e8';
 		$border     = $is_error ? '#d63638' : '#dba617';
@@ -192,9 +193,17 @@ class ETSS_Preview {
 			$style .= 'position:fixed;left:0;right:0;bottom:0;z-index:99999;border-top:1px solid ' . $border . ';border-bottom:0;';
 		}
 
+		// リンクの高さは 24px 以上にする（WCAG 2.2 の最小のタップ範囲）。
+		$link_style = 'color:#1d2327;text-decoration:underline;display:inline-flex;align-items:center;min-height:24px;margin-right:8px;';
+
+		$list_link = ( $is_error && '' !== $list_url )
+			? ' <a href="' . esc_url( $list_url ) . '" style="' . esc_attr( $link_style ) . '">スライドの一覧を開く</a>'
+			: '';
+
 		return '<div class="etss-preview-banner" ' . ( $is_error ? 'role="alert"' : 'role="region" aria-label="日時プレビュー"' ) . ' style="' . esc_attr( $style ) . '">'
 			. '<strong>' . esc_html( $text ) . '</strong>'
-			. ' <a href="' . esc_url( $exit_url ) . '" style="color:#1d2327;text-decoration:underline;">プレビューを終了</a>'
+			. $list_link
+			. ' <a href="' . esc_url( $exit_url ) . '" style="' . esc_attr( $link_style ) . '">プレビューを終了</a>'
 			. '</div>';
 	}
 
@@ -232,7 +241,9 @@ class ETSS_Preview {
 			self::banner_text( self::$at, time(), wp_timezone() ),
 			remove_query_arg( self::QUERY_VAR ),
 			$at_top,
-			null === self::$at
+			null === self::$at,
+			// 案内する移動先は、権限のある人にだけ出す。
+			self::current_user_can_preview() ? admin_url( 'edit.php?post_type=' . ETSS_Post_Types::SLIDE ) : ''
 		);
 
 		echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- banner_html() 内でエスケープ済み。

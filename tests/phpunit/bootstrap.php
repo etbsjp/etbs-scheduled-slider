@@ -409,6 +409,29 @@ function get_posts( $args = array() ) {
 	return $GLOBALS['etss_test_get_posts'];
 }
 
+/**
+ * wp_style_is() のスタブ（`registered` は、登録済みのスタイル `$GLOBALS['etss_test_registered_styles']` に入れたものだけ true）。
+ *
+ * @param string $handle スタイルのハンドル。
+ * @param string $status 調べる状態。
+ * @return bool
+ */
+function wp_style_is( $handle, $status = 'enqueued' ) {
+	unset( $status );
+
+	return isset( $GLOBALS['etss_test_registered_styles'] ) && in_array( $handle, $GLOBALS['etss_test_registered_styles'], true );
+}
+
+/**
+ * wp_enqueue_style() のスタブ。読み込みを頼まれたハンドルを `$GLOBALS['etss_test_enqueued_styles']` に記録する。
+ *
+ * @param string $handle スタイルのハンドル。
+ * @return void
+ */
+function wp_enqueue_style( $handle ) {
+	$GLOBALS['etss_test_enqueued_styles'][] = $handle;
+}
+
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-schedule.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-link.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-loop.php';
@@ -425,3 +448,4 @@ require_once dirname( __DIR__, 2 ) . '/inc/class-etss-slide-admin.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-render.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-block.php';
 require_once dirname( __DIR__, 2 ) . '/inc/class-etss-preview.php';
+require_once dirname( __DIR__, 2 ) . '/inc/class-etss-import.php';

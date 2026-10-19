@@ -134,7 +134,7 @@ class PreviewTest extends TestCase {
 	}
 
 	/**
-	 * ETSS_Preview::banner_html() のテスト（エスケープと、固定の有無）。
+	 * ETSS_Preview::banner_html() のテスト（エスケープ・固定の有無・一覧へのリンク・リンクのタップ範囲）。
 	 *
 	 * @return void
 	 */
@@ -149,6 +149,48 @@ class PreviewTest extends TestCase {
 		$this->assertStringContainsString( 'プレビューを終了', $html, '終了のリンクがある' );
 		$this->assertStringNotContainsString( 'position:fixed', $html, '本文の先頭の帯は固定しない' );
 		$this->assertStringContainsString( 'position:fixed', ETSS_Preview::banner_html( 'x', '/', false ), '下に出す帯は固定する' );
+
+		// 日時を読み取れないときの、スライドの一覧へのリンクと、リンクのタップ範囲。
+		$list_url = 'https://example.com/wp-admin/edit.php?post_type=etss_slide';
+
+		$test_cases = array(
+			array(
+				'test_condition_name' => '日時を読めない帯で、移動先を渡した => 一覧へのリンクがある',
+				'args'                => array( 'x', '/', true, true, $list_url ),
+				'expected_list_link'  => true,
+			),
+			array(
+				'test_condition_name' => '日時を読めない帯で、移動先が空（権限が無い） => 一覧へのリンクは出さない',
+				'args'                => array( 'x', '/', true, true, '' ),
+				'expected_list_link'  => false,
+			),
+			array(
+				'test_condition_name' => '日時を読めない帯で、移動先を渡さない => 一覧へのリンクは出さない',
+				'args'                => array( 'x', '/', true, true ),
+				'expected_list_link'  => false,
+			),
+			array(
+				'test_condition_name' => '通常のプレビュー中の帯で移動先を渡した => 一覧へのリンクは出さない（案内が無いため）',
+				'args'                => array( 'x', '/', true, false, $list_url ),
+				'expected_list_link'  => false,
+			),
+			array(
+				'test_condition_name' => '本文の下に固定する帯でも => 日時を読めなければ一覧へのリンクがある',
+				'args'                => array( 'x', '/', false, true, $list_url ),
+				'expected_list_link'  => true,
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$html      = ETSS_Preview::banner_html( ...$case['args'] );
+			$has_label = false !== strpos( $html, 'スライドの一覧を開く' );
+			$has_href  = false !== strpos( $html, 'href="' . $list_url . '"' );
+			$this->assertSame( $case['expected_list_link'], $has_label, $case['test_condition_name'] );
+			$this->assertSame( $case['expected_list_link'], $has_href, $case['test_condition_name'] . '（リンク先）' );
+
+			// 終了のリンクは、どの帯でも高さ 24px 以上（WCAG 2.2 の最小のタップ範囲）。
+			$this->assertSame( 1, preg_match( '/<a href="[^"]*" style="[^"]*display:inline-flex;align-items:center;min-height:24px;[^"]*">プレビューを終了<\/a>/', $html ), $case['test_condition_name'] . '（終了のリンクの高さ）' );
+		}
 	}
 
 	/**
