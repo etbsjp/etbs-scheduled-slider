@@ -64,6 +64,11 @@ class ETSS_CLI {
 	 * @return void
 	 */
 	public function import_vk_slider( $args, $assoc_args ) {
+		$arg_error = ETSS_Import::validate_args( $args[0], \WP_CLI\Utils\get_flag_value( $assoc_args, 'index', 0 ) );
+		if ( '' !== $arg_error ) {
+			\WP_CLI::error( $arg_error );
+		}
+
 		$post_id   = (int) $args[0];
 		$slider_id = (int) \WP_CLI\Utils\get_flag_value( $assoc_args, 'slider', 0 );
 		$index     = (int) \WP_CLI\Utils\get_flag_value( $assoc_args, 'index', 0 );

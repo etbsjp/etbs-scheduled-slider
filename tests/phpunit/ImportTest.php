@@ -1020,6 +1020,73 @@ class ImportTest extends TestCase {
 	}
 
 	/**
+	 * ETSS_Import::validate_args() のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_validate_args() {
+		$test_cases = array(
+			array(
+				'test_condition_name' => '投稿 ID 123・index 0 => 問題なし',
+				'post_id'             => '123',
+				'index'               => 0,
+				'expected_error'      => false,
+			),
+			array(
+				'test_condition_name' => 'index が文字列の 2 => 問題なし',
+				'post_id'             => 5,
+				'index'               => '2',
+				'expected_error'      => false,
+			),
+			array(
+				'test_condition_name' => 'index が負数 => エラー（--index と指定の仕方を含む）',
+				'post_id'             => '123',
+				'index'               => '-1',
+				'expected_error'      => true,
+			),
+			array(
+				'test_condition_name' => 'index が数でない => エラー',
+				'post_id'             => '123',
+				'index'               => 'abc',
+				'expected_error'      => true,
+			),
+			array(
+				'test_condition_name' => 'index が小数 => エラー',
+				'post_id'             => '123',
+				'index'               => '1.5',
+				'expected_error'      => true,
+			),
+			array(
+				'test_condition_name' => '投稿 ID が 0 => エラー',
+				'post_id'             => '0',
+				'index'               => 0,
+				'expected_error'      => true,
+			),
+			array(
+				'test_condition_name' => '投稿 ID が負数 => エラー',
+				'post_id'             => '-3',
+				'index'               => 0,
+				'expected_error'      => true,
+			),
+			array(
+				'test_condition_name' => '投稿 ID が数でない => エラー',
+				'post_id'             => 'abc',
+				'index'               => 0,
+				'expected_error'      => true,
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$error = ETSS_Import::validate_args( $case['post_id'], $case['index'] );
+			$this->assertSame( $case['expected_error'], '' !== $error, $case['test_condition_name'] );
+		}
+
+		$this->assertStringContainsString( '--index', ETSS_Import::validate_args( '1', '-1' ), 'index のエラーは --index を名指しする' );
+		$this->assertStringContainsString( '0 以上', ETSS_Import::validate_args( '1', '-1' ), 'index のエラーは指定の仕方を伝える' );
+		$this->assertStringContainsString( '投稿 ID', ETSS_Import::validate_args( '0', 0 ), '投稿 ID のエラーは投稿 ID を名指しする' );
+	}
+
+	/**
 	 * ETSS_Import::parse_start() のテスト。
 	 *
 	 * @return void

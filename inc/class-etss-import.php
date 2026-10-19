@@ -381,6 +381,24 @@ class ETSS_Import {
 	}
 
 	/**
+	 * コマンドの投稿 ID と `--index` を確かめる。
+	 *
+	 * @param mixed $post_id 投稿 ID（コマンドの引数）。
+	 * @param mixed $index   `--index` の値（何番目の VK スライダーか）。
+	 * @return string エラー文（何が悪いか＋どう指定するか）。問題が無ければ空文字。
+	 */
+	public static function validate_args( $post_id, $index ) {
+		if ( ! is_numeric( $post_id ) || (int) $post_id <= 0 || (string) (int) $post_id !== (string) $post_id ) {
+			return '投稿 ID が正しくありません。1 以上の数（VK のスライダーを置いている投稿の ID）で指定してください。';
+		}
+		if ( ! is_numeric( $index ) || (int) $index < 0 || (string) (int) $index !== (string) $index ) {
+			return '--index が正しくありません。0 以上の数（0 が1つめの VK スライダー）で指定してください。';
+		}
+
+		return '';
+	}
+
+	/**
 	 * `--start` の値を UTC の Unix 秒にする。
 	 *
 	 * 表示開始の入力と同じ形（`2026-11-06T12:00`。秒つきも可）を、サイトのタイムゾーンで解釈する。
