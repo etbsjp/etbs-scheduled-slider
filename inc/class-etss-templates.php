@@ -5,8 +5,8 @@
  * 1枚のスライドの画像枠と HTML は「ひな形」で決まる。本体は `vk-image` を持ち、サイト固有のひな形は
  * そのサイトの mu-plugin が `etss_register_templates` アクションの中で `etss_register_template()` を呼んで足す。
  *
- * ここでは定義の形と検査までを持つ。`render_item` による描画は後の issue で作る（そのため `render_item` は
- * 省略できるが、指定するなら呼び出せる値でなければならない）。
+ * 定義の形と検査、本体のひな形を持つ。`render_item` は省略できるが（その場合、そのひな形のスライダーは何も出さない）、
+ * 指定するなら呼び出せる値でなければならない。
  * `render_item` が返す HTML のエスケープはひな形の責任で、本体は `wp_kses_post` に通さない（VK の属性を落とさないため）。
  *
  * @package etbs-scheduled-slider
@@ -165,7 +165,8 @@ class ETSS_Templates {
 	/**
 	 * 本体のひな形 `vk-image` の定義。画像枠は1つ（必須）。
 	 *
-	 * VK のスライダー項目に、リンク付きの画像ブロックを1つ置いた形で描画する（描画は後の issue）。
+	 * VK のスライダー項目に、リンク付きの画像ブロックを1つ置いた形で描画する。
+	 * 項目は縦中央・左右の余白なしにして、画像が項目いっぱいに出るようにする。
 	 *
 	 * @return array 定義。
 	 */
@@ -179,8 +180,50 @@ class ETSS_Templates {
 					'required'    => true,
 				),
 			),
+			'render_item'     => array( __CLASS__, 'render_vk_image' ),
+			'item_class'      => 'vk_valign-center vk_slider_item-paddingLR-zero',
 			'default_options' => array(),
 		);
+	}
+
+	/**
+	 * ひな形 `vk-image` の `render_item`。画像1枚にリンクを付けた、画像ブロックと同じ形の HTML を返す。
+	 *
+	 * 1枚目（`is_first`）の目に見える画像は、`loading` を付けず `data-no-lazy="1"` と `fetchpriority="high"` を付ける
+	 * （LCP を遅らせないため。`data-no-lazy` は LiteSpeed Cache の遅延読み込みが 1枚目を `data-src` に書き換えないための目印）。
+	 * 2枚目以降は `loading="lazy"`。
+	 * エスケープは本体が行わないので、ここで済ませる（`esc_url`・`wp_get_attachment_image` の属性のエスケープ）。
+	 *
+	 * @param array $slide   スライド。`title`（代替テキスト）・`url`（リンク先）・`images`（枠 ID => 添付ファイル ID）を持つ。
+	 * @param array $context `index`（0 始まり）と `is_first`。
+	 * @return string スライドの中身の HTML。画像が出せなければ空文字。
+	 */
+	public static function render_vk_image( array $slide, array $context ) {
+		$attachment_id = isset( $slide['images']['image'] ) ? (int) $slide['images']['image'] : 0;
+		if ( $attachment_id <= 0 ) {
+			return '';
+		}
+
+		$attr = array(
+			'alt'   => (string) $slide['title'],
+			'class' => 'attachment-full size-full wp-image-' . $attachment_id,
+		);
+
+		if ( ! empty( $context['is_first'] ) ) {
+			// `loading` を false にすると、wp_get_attachment_image() が付けない。
+			$attr['loading']       = false;
+			$attr['fetchpriority'] = 'high';
+			$attr['data-no-lazy']  = '1';
+		} else {
+			$attr['loading'] = 'lazy';
+		}
+
+		$image = wp_get_attachment_image( $attachment_id, 'full', false, $attr );
+		if ( '' === $image ) {
+			return '';
+		}
+
+		return '<figure class="wp-block-image size-full"><a href="' . esc_url( $slide['url'] ) . '">' . $image . '</a></figure>';
 	}
 
 	/**

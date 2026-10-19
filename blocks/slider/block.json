@@ -1,0 +1,21 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "etss/slider",
+	"title": "予約スライダー",
+	"category": "widgets",
+	"icon": "images-alt2",
+	"description": "ETBS Scheduled Slider のスライダーを置きます。スライドの表示開始・表示終了の日時どおりに、出し入れします。",
+	"keywords": [ "スライダー", "slider", "予約", "VK" ],
+	"attributes": {
+		"sliderId": {
+			"type": "integer",
+			"default": 0
+		}
+	},
+	"supports": {
+		"html": false,
+		"reusable": false
+	},
+	"editorScript": "etss-slider-editor"
+}

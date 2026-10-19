@@ -89,6 +89,27 @@ class ETSS_Display {
 	}
 
 	/**
+	 * スライダーの投稿ステータスを、選択肢のラベルに添える形（「（下書き）」など）にする。公開なら空文字。
+	 *
+	 * @param string $post_status WordPress の投稿ステータス。
+	 * @return string 添える文字列。
+	 */
+	public static function slider_status_suffix( $post_status ) {
+		$labels = array(
+			'draft'   => '下書き',
+			'pending' => '承認待ち',
+			'private' => '非公開',
+			'future'  => '予約',
+		);
+
+		if ( 'publish' === $post_status ) {
+			return '';
+		}
+
+		return '（' . ( isset( $labels[ $post_status ] ) ? $labels[ $post_status ] : '公開されていません' ) . '）';
+	}
+
+	/**
 	 * 日時を「11/06（金）12:00」の形にする（一覧・公開ボックス用）。24時間制。
 	 *
 	 * @param int          $timestamp UTC の Unix 秒。

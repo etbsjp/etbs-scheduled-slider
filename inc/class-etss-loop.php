@@ -27,39 +27,76 @@ class ETSS_Loop {
 	/**
 	 * ループに要る枚数を求める。
 	 *
-	 * 要る枚数 ＝ ceil( 最大の slidesPerView ) ＋（centeredSlides で、その値が偶数なら 1）＋ slidesPerGroup。
-	 * slidesPerGroup は one-by-one なら 1、それ以外（slides-per-view）は一度に見せる枚数と同じ。
-	 * 例: 1.3 枚見せ・中央寄せ・one-by-one → 2 ＋ 1 ＋ 1 ＝ 4。
+	 * VK Blocks のスライダーの JS（vk-slider.min.js）が、枚数が足りないときにループを止める条件に合わせる。
+	 * 画面幅（Mobile・Tablet・PC）ごとに次を求め、最大のものを返す。
+	 * - 見せる枚数 ＝ ceil( slidesPerView )。中央寄せで偶数なら 1 足す
+	 * - 一度に送る枚数 ＝ slides-per-view なら floor( slidesPerView )（1 以上）、one-by-one なら 1
+	 * - 要る枚数 ＝ 見せる枚数 ＋ 先読み。先読みは、中央寄せなら max( 一度に送る枚数, ceil( 見せる枚数 ÷ 2 ) )、そうでなければ一度に送る枚数。
+	 *   先読みは一度に送る枚数の倍数に切り上げる
 	 *
+	 * 例: 1.3 枚見せ・中央寄せ・one-by-one → 見せる 3、先読み 2 → 5。
 	 * 見せる枚数は MAX_PER_VIEW（20）で打ち切り、0 以下・NaN・INF・非数値は 1 として扱う。
+	 * effect が fade のときは、VK は枚数を指定しない（1 枚見せ・1 枚ずつ）ので 2。
 	 *
-	 * @param array $options 動きの設定（slidesPerViewMobile / Tablet / PC・centeredSlides・slidesPerGroup）。
+	 * @param array $options 動きの設定（slidesPerViewMobile / Tablet / PC・centeredSlides・slidesPerGroup・effect）。
 	 * @return int 要る枚数（1 以上）。
 	 */
 	public static function required_count( array $options ) {
-		// 3 つの画面幅のうち、最大の「見せる枚数」を取る。
-		$max_per_view = 1.0;
-		foreach ( array( 'slidesPerViewMobile', 'slidesPerViewTablet', 'slidesPerViewPC' ) as $key ) {
-			if ( isset( $options[ $key ] ) && is_numeric( $options[ $key ] ) ) {
-				$value = (float) $options[ $key ];
+		$centered   = ! empty( $options['centeredSlides'] );
+		$per_group  = isset( $options['slidesPerGroup'] ) ? $options['slidesPerGroup'] : 'one-by-one';
+		$required   = 0;
+		$is_fade    = isset( $options['effect'] ) && 'fade' === $options['effect'];
+		$candidates = $is_fade ? array( 1.0 ) : array();
 
-				// NaN・無限大・0 以下は 1 枚見せに戻し、大きすぎる値は上限で打ち切る。
-				if ( is_nan( $value ) || is_infinite( $value ) || $value <= 0 ) {
-					$value = 1.0;
-				}
-				$max_per_view = max( $max_per_view, min( $value, self::MAX_PER_VIEW ) );
+		// 画面幅ごとの「見せる枚数」を集める。
+		foreach ( array( 'slidesPerViewMobile', 'slidesPerViewTablet', 'slidesPerViewPC' ) as $key ) {
+			if ( ! $is_fade ) {
+				$candidates[] = self::normalize_per_view( isset( $options[ $key ] ) ? $options[ $key ] : 1 );
 			}
 		}
 
-		$visible = (int) ceil( $max_per_view );
+		foreach ( $candidates as $per_view ) {
+			$visible = (int) ceil( $per_view );
 
-		// 中央寄せで見せる枚数が偶数なら、左右を揃えるために 1 枚足す。
-		$center = ( ! empty( $options['centeredSlides'] ) && 0 === $visible % 2 ) ? 1 : 0;
+			// 中央寄せで見せる枚数が偶数なら、左右を揃えるために 1 枚足す。
+			if ( $centered && 0 === $visible % 2 ) {
+				++$visible;
+			}
 
-		// 一度に送る枚数。
-		$group = ( isset( $options['slidesPerGroup'] ) && 'one-by-one' !== $options['slidesPerGroup'] ) ? $visible : 1;
+			// 一度に送る枚数。
+			$group = ( 'slides-per-view' === $per_group ) ? max( 1, (int) floor( $per_view ) ) : 1;
 
-		return $visible + $center + $group;
+			// 先読みの枚数。一度に送る枚数の倍数に切り上げる。
+			$ahead = $centered ? max( $group, (int) ceil( $visible / 2 ) ) : $group;
+			if ( 0 !== $ahead % $group ) {
+				$ahead += $group - ( $ahead % $group );
+			}
+
+			$required = max( $required, $visible + $ahead );
+		}
+
+		return $required;
+	}
+
+	/**
+	 * 「一度に見せる枚数」の設定値を、計算に使える数にする。
+	 *
+	 * 数値でない・0 以下・NaN・INF は 1、MAX_PER_VIEW より大きい値は MAX_PER_VIEW にする。1 未満の正の値は 1 にする。
+	 *
+	 * @param mixed $value 設定値。
+	 * @return float 1 以上 MAX_PER_VIEW 以下の数。
+	 */
+	private static function normalize_per_view( $value ) {
+		if ( ! is_numeric( $value ) ) {
+			return 1.0;
+		}
+
+		$number = (float) $value;
+		if ( is_nan( $number ) || is_infinite( $number ) || $number <= 0 ) {
+			return 1.0;
+		}
+
+		return max( 1.0, min( $number, self::MAX_PER_VIEW ) );
 	}
 
 	/**
