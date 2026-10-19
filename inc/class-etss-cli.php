@@ -121,14 +121,22 @@ class ETSS_CLI {
 
 		// スライドを作る。
 		$post_ids = $this->create_slides( $plan, $slider_id );
-		$this->print_created( $plan, $post_ids );
+		if ( ! $post_ids ) {
+			\WP_CLI::error( 'スライドを 1 枚も作れませんでした。上の警告を確かめてください。' );
+		}
+		$counts = $this->print_created( $plan, $post_ids );
 
 		if ( $update ) {
 			update_post_meta( $slider_id, ETSS_Meta::OPTIONS, wp_slash( $mapping['options'] ) );
 			\WP_CLI::log( '動きの設定を写しました。' );
 		}
 
-		\WP_CLI::success( count( $post_ids ) . ' 枚のスライドを作りました。スライドの一覧で確かめてください。' );
+		if ( count( $post_ids ) < count( $plan ) ) {
+			\WP_CLI::warning( sprintf( '%d 項目のうち %d 項目は作れませんでした。', count( $plan ), count( $plan ) - count( $post_ids ) ) );
+		}
+
+		\WP_CLI::success( sprintf( '%d 枚のスライドを作りました（表示 %d 枚・下書き %d 枚）。', count( $post_ids ), $counts['publish'], $counts['draft'] ) );
+		\WP_CLI::log( 'スライドの一覧: ' . admin_url( 'edit.php?post_type=etss_slide' ) );
 	}
 
 	/**
@@ -270,7 +278,7 @@ class ETSS_CLI {
 	 *
 	 * @param array $plan     ETSS_Import::plan() の結果。
 	 * @param array $post_ids 計画の `index` => 作ったスライドの投稿 ID。
-	 * @return void
+	 * @return array 作れたスライドの `publish`（表示の枚数）と `draft`（下書きの枚数）。
 	 */
 	private function print_created( array $plan, array $post_ids ) {
 		foreach ( $plan as $key => $item ) {
@@ -284,23 +292,21 @@ class ETSS_CLI {
 		}
 
 		\WP_CLI\Utils\format_items( 'table', ETSS_Import::table_rows( $plan, $post_ids ), array( '#', 'ID', '代替テキスト', 'リンク先', '画像', '状態', '理由' ) );
-		$this->print_summary( $plan );
+		$this->print_summary( $plan, $post_ids );
+
+		return ETSS_Import::count_by_status( $plan, $post_ids );
 	}
 
 	/**
 	 * 表示にするものと下書きにするものの数を出す。
 	 *
-	 * @param array $plan ETSS_Import::plan() の結果。
+	 * @param array      $plan     ETSS_Import::plan() の結果。
+	 * @param array|null $post_ids 作ったスライドの投稿 ID。渡すと、作れた項目だけを数える。
 	 * @return void
 	 */
-	private function print_summary( array $plan ) {
-		$drafts = 0;
-		foreach ( $plan as $item ) {
-			if ( 'draft' === $item['status'] ) {
-				++$drafts;
-			}
-		}
+	private function print_summary( array $plan, $post_ids = null ) {
+		$counts = ETSS_Import::count_by_status( $plan, $post_ids );
 
-		\WP_CLI::log( sprintf( '表示 %d 枚／下書き %d 枚（下書きは理由を直して、編集画面で「表示に登録」を押すと表示されます）', count( $plan ) - $drafts, $drafts ) );
+		\WP_CLI::log( sprintf( '表示 %d 枚／下書き %d 枚（下書きは理由を直して、編集画面で「表示に登録」を押すと表示されます）', $counts['publish'], $counts['draft'] ) );
 	}
 }

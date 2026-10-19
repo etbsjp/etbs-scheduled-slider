@@ -1150,6 +1150,59 @@ class ImportTest extends TestCase {
 	}
 
 	/**
+	 * ETSS_Import::count_by_status() のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_count_by_status() {
+		$plan = array(
+			array(
+				'index'  => 0,
+				'status' => 'publish',
+			),
+			array(
+				'index'  => 1,
+				'status' => 'draft',
+			),
+			array(
+				'index'  => 2,
+				'status' => 'publish',
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'publish' => 2,
+				'draft'   => 1,
+			),
+			ETSS_Import::count_by_status( $plan ),
+			'post_ids を渡さなければ計画の全項目'
+		);
+		$this->assertSame(
+			array(
+				'publish' => 1,
+				'draft'   => 1,
+			),
+			ETSS_Import::count_by_status(
+				$plan,
+				array(
+					0 => 901,
+					1 => 902,
+				)
+			),
+			'作れた項目だけを数える'
+		);
+		$this->assertSame(
+			array(
+				'publish' => 0,
+				'draft'   => 0,
+			),
+			ETSS_Import::count_by_status( $plan, array() ),
+			'1枚も作れなければ 0'
+		);
+	}
+
+	/**
 	 * ETSS_Import::table_rows() のテスト。
 	 *
 	 * @return void

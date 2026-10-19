@@ -459,6 +459,33 @@ class ETSS_Import {
 	}
 
 	/**
+	 * 計画を、表示にするものと下書きにするものに数える（コマンドの出力用）。
+	 *
+	 * @param array      $plan     plan() の結果。
+	 * @param array|null $post_ids 作ったスライドの投稿 ID（計画の `index` => ID）。渡すと、作れた項目だけを数える。null なら計画の全項目。
+	 * @return array `publish`（表示の枚数）と `draft`（下書きの枚数）。
+	 */
+	public static function count_by_status( array $plan, $post_ids = null ) {
+		$counts = array(
+			'publish' => 0,
+			'draft'   => 0,
+		);
+
+		foreach ( $plan as $item ) {
+			if ( null !== $post_ids && ! isset( $post_ids[ $item['index'] ] ) ) {
+				continue;
+			}
+			if ( 'publish' === $item['status'] ) {
+				++$counts['publish'];
+			} else {
+				++$counts['draft'];
+			}
+		}
+
+		return $counts;
+	}
+
+	/**
 	 * 動きの設定の値が同じかを比べる（真偽はそのまま、数値と文字列は文字列にして比べる。1 と 1.0 は同じ）。
 	 *
 	 * @param mixed $a 値。
