@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: ETBS Scheduled Slider
- * Version: 0.1.0
+ * Version: 1.0.0
  * Description: VK Blocks のスライダーを、管理画面から1枚ずつ差し替えられるようにします。スライドごとに表示開始・表示終了の日時を設定でき、時刻どおりに出し入れします。
  * Author: ETBS (DAI)
  * Author URI: https://etbs.jp
