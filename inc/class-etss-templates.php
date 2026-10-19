@@ -223,6 +223,12 @@ class ETSS_Templates {
 			return '';
 		}
 
+		// 画像ブロックのスタイルは、画像ブロックを描画したページにしか読み込まれない場合がある。
+		// 読み込まれないと、リンク付きの画像の下に隙間ができ、元の VK のスライダーと高さが変わる。
+		if ( wp_style_is( 'wp-block-image', 'registered' ) ) {
+			wp_enqueue_style( 'wp-block-image' );
+		}
+
 		return '<figure class="wp-block-image size-full"><a href="' . esc_url( $slide['url'] ) . '">' . $image . '</a></figure>';
 	}
 

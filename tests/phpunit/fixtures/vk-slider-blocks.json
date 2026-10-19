@@ -1,0 +1,193 @@
+[
+    {
+        "blockName": "core/paragraph",
+        "attrs": [],
+        "innerBlocks": [],
+        "innerHTML": "\n<p>この下が、移行元の VK Blocks のスライダーです。</p>\n",
+        "innerContent": [
+            "\n<p>この下が、移行元の VK Blocks のスライダーです。</p>\n"
+        ]
+    },
+    {
+        "blockName": null,
+        "attrs": [],
+        "innerBlocks": [],
+        "innerHTML": "\n\n",
+        "innerContent": [
+            "\n\n"
+        ]
+    },
+    {
+        "blockName": "vk-blocks/slider",
+        "attrs": {
+            "autoPlayDelay": 4000,
+            "speed": 800,
+            "blockId": "9c5e2f10-1a2b-4c3d-8e9f-0a1b2c3d4e5f"
+        },
+        "innerBlocks": [
+            {
+                "blockName": "vk-blocks/slider-item",
+                "attrs": {
+                    "padding_left_and_right": "0",
+                    "blockId": "aaaaaaaa-0001-4000-8000-000000000001"
+                },
+                "innerBlocks": [
+                    {
+                        "blockName": "core/image",
+                        "attrs": {
+                            "id": 538,
+                            "sizeSlug": "full",
+                            "linkDestination": "custom"
+                        },
+                        "innerBlocks": [],
+                        "innerHTML": "\n<figure class=\"wp-block-image size-full\"><a href=\"/campaign-a/\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-1.png\" alt=\"デモ 1 の告知文\" class=\"wp-image-538\"/></a></figure>\n",
+                        "innerContent": [
+                            "\n<figure class=\"wp-block-image size-full\"><a href=\"/campaign-a/\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-1.png\" alt=\"デモ 1 の告知文\" class=\"wp-image-538\"/></a></figure>\n"
+                        ]
+                    }
+                ],
+                "innerHTML": "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0001-4000-8000-000000000001\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\"></div></div>\n",
+                "innerContent": [
+                    "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0001-4000-8000-000000000001\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\">",
+                    null,
+                    "</div></div>\n"
+                ]
+            },
+            {
+                "blockName": "vk-blocks/slider-item",
+                "attrs": {
+                    "padding_left_and_right": "0",
+                    "blockId": "aaaaaaaa-0002-4000-8000-000000000002"
+                },
+                "innerBlocks": [
+                    {
+                        "blockName": "core/image",
+                        "attrs": {
+                            "id": 539,
+                            "sizeSlug": "full",
+                            "linkDestination": "none"
+                        },
+                        "innerBlocks": [],
+                        "innerHTML": "\n<figure class=\"wp-block-image size-full\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-2.png\" alt=\"デモ 2 の告知文\" class=\"wp-image-539\"/></figure>\n",
+                        "innerContent": [
+                            "\n<figure class=\"wp-block-image size-full\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-2.png\" alt=\"デモ 2 の告知文\" class=\"wp-image-539\"/></figure>\n"
+                        ]
+                    }
+                ],
+                "innerHTML": "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0002-4000-8000-000000000002\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\"></div></div>\n",
+                "innerContent": [
+                    "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0002-4000-8000-000000000002\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\">",
+                    null,
+                    "</div></div>\n"
+                ]
+            },
+            {
+                "blockName": "vk-blocks/slider-item",
+                "attrs": {
+                    "padding_left_and_right": "0",
+                    "blockId": "aaaaaaaa-0003-4000-8000-000000000003"
+                },
+                "innerBlocks": [
+                    {
+                        "blockName": "core/image",
+                        "attrs": {
+                            "id": 540,
+                            "sizeSlug": "full",
+                            "linkDestination": "custom"
+                        },
+                        "innerBlocks": [],
+                        "innerHTML": "\n<figure class=\"wp-block-image size-full\"><a href=\"https://example.com/news/?id=3&amp;from=slider\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-3.png\" alt=\"デモ 3 の告知文（&amp;を含む）\" class=\"wp-image-540\"/></a></figure>\n",
+                        "innerContent": [
+                            "\n<figure class=\"wp-block-image size-full\"><a href=\"https://example.com/news/?id=3&amp;from=slider\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-3.png\" alt=\"デモ 3 の告知文（&amp;を含む）\" class=\"wp-image-540\"/></a></figure>\n"
+                        ]
+                    }
+                ],
+                "innerHTML": "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0003-4000-8000-000000000003\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\"></div></div>\n",
+                "innerContent": [
+                    "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0003-4000-8000-000000000003\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\">",
+                    null,
+                    "</div></div>\n"
+                ]
+            },
+            {
+                "blockName": "vk-blocks/slider-item",
+                "attrs": {
+                    "padding_left_and_right": "0",
+                    "blockId": "aaaaaaaa-0004-4000-8000-000000000004"
+                },
+                "innerBlocks": [
+                    {
+                        "blockName": "core/image",
+                        "attrs": {
+                            "id": 541,
+                            "sizeSlug": "full",
+                            "linkDestination": "custom"
+                        },
+                        "innerBlocks": [],
+                        "innerHTML": "\n<figure class=\"wp-block-image size-full\"><a href=\"https://example.com/event/\" target=\"_blank\" rel=\"noreferrer noopener\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-4.png\" alt=\"デモ 4 の告知文\" class=\"wp-image-541\"/></a></figure>\n",
+                        "innerContent": [
+                            "\n<figure class=\"wp-block-image size-full\"><a href=\"https://example.com/event/\" target=\"_blank\" rel=\"noreferrer noopener\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-4.png\" alt=\"デモ 4 の告知文\" class=\"wp-image-541\"/></a></figure>\n"
+                        ]
+                    }
+                ],
+                "innerHTML": "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0004-4000-8000-000000000004\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\"></div></div>\n",
+                "innerContent": [
+                    "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0004-4000-8000-000000000004\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\">",
+                    null,
+                    "</div></div>\n"
+                ]
+            },
+            {
+                "blockName": "vk-blocks/slider-item",
+                "attrs": {
+                    "padding_left_and_right": "0",
+                    "blockId": "aaaaaaaa-0005-4000-8000-000000000005"
+                },
+                "innerBlocks": [
+                    {
+                        "blockName": "core/image",
+                        "attrs": {
+                            "id": 542,
+                            "sizeSlug": "full",
+                            "linkDestination": "none"
+                        },
+                        "innerBlocks": [],
+                        "innerHTML": "\n<figure class=\"wp-block-image size-full\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-5.png\" alt=\"デモ 5 の告知文\" class=\"wp-image-542\"/></figure>\n",
+                        "innerContent": [
+                            "\n<figure class=\"wp-block-image size-full\"><img src=\"http://aiwpdemo.etbs.lc/wp-content/uploads/2026/10/etss-demo-5.png\" alt=\"デモ 5 の告知文\" class=\"wp-image-542\"/></figure>\n"
+                        ]
+                    }
+                ],
+                "innerHTML": "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0005-4000-8000-000000000005\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\"></div></div>\n",
+                "innerContent": [
+                    "\n<div class=\"wp-block-vk-blocks-slider-item vk_slider_item swiper-slide vk_valign-center vk_slider_item-paddingLR-zero vk_slider_item-aaaaaaaa-0005-4000-8000-000000000005\"><div class=\"vk_slider_item-background-area\"></div><div class=\"vk_slider_item_container\">",
+                    null,
+                    "</div></div>\n"
+                ]
+            }
+        ],
+        "innerHTML": "\n<div class=\"wp-block-vk-blocks-slider swiper vk_slider vk_slider_9c5e2f10-1a2b-4c3d-8e9f-0a1b2c3d4e5f\" data-vkb-slider=\"{&quot;autoPlay&quot;:true,&quot;autoPlayStop&quot;:true,&quot;autoPlayDelay&quot;:4000,&quot;pauseButton&quot;:false,&quot;pagination&quot;:&quot;bullets&quot;,&quot;width&quot;:&quot;&quot;,&quot;loop&quot;:true,&quot;effect&quot;:&quot;slide&quot;,&quot;speed&quot;:800,&quot;direction&quot;:&quot;rtl&quot;,&quot;slidesPerViewMobile&quot;:1,&quot;slidesPerViewTablet&quot;:1,&quot;slidesPerViewPC&quot;:1,&quot;slidesPerGroup&quot;:&quot;one-by-one&quot;,&quot;centeredSlides&quot;:false,&quot;zoomAnimation&quot;:false,&quot;zoomInitialScale&quot;:1,&quot;zoomFinalScale&quot;:1.25,&quot;blockId&quot;:&quot;9c5e2f10-1a2b-4c3d-8e9f-0a1b2c3d4e5f&quot;}\"><div class=\"swiper-wrapper\">\n\n\n\n\n\n\n\n</div><div class=\"swiper-button-next swiper-button-mobile-bottom\"></div><div class=\"swiper-button-prev swiper-button-mobile-bottom\"></div><div class=\"swiper-pagination swiper-pagination-bullets\"></div></div>\n",
+        "innerContent": [
+            "\n<div class=\"wp-block-vk-blocks-slider swiper vk_slider vk_slider_9c5e2f10-1a2b-4c3d-8e9f-0a1b2c3d4e5f\" data-vkb-slider=\"{&quot;autoPlay&quot;:true,&quot;autoPlayStop&quot;:true,&quot;autoPlayDelay&quot;:4000,&quot;pauseButton&quot;:false,&quot;pagination&quot;:&quot;bullets&quot;,&quot;width&quot;:&quot;&quot;,&quot;loop&quot;:true,&quot;effect&quot;:&quot;slide&quot;,&quot;speed&quot;:800,&quot;direction&quot;:&quot;rtl&quot;,&quot;slidesPerViewMobile&quot;:1,&quot;slidesPerViewTablet&quot;:1,&quot;slidesPerViewPC&quot;:1,&quot;slidesPerGroup&quot;:&quot;one-by-one&quot;,&quot;centeredSlides&quot;:false,&quot;zoomAnimation&quot;:false,&quot;zoomInitialScale&quot;:1,&quot;zoomFinalScale&quot;:1.25,&quot;blockId&quot;:&quot;9c5e2f10-1a2b-4c3d-8e9f-0a1b2c3d4e5f&quot;}\"><div class=\"swiper-wrapper\">",
+            null,
+            "\n\n",
+            null,
+            "\n\n",
+            null,
+            "\n\n",
+            null,
+            "\n\n",
+            null,
+            "</div><div class=\"swiper-button-next swiper-button-mobile-bottom\"></div><div class=\"swiper-button-prev swiper-button-mobile-bottom\"></div><div class=\"swiper-pagination swiper-pagination-bullets\"></div></div>\n"
+        ]
+    },
+    {
+        "blockName": null,
+        "attrs": [],
+        "innerBlocks": [],
+        "innerHTML": "\n",
+        "innerContent": [
+            "\n"
+        ]
+    }
+]

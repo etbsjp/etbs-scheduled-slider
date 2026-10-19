@@ -43,6 +43,23 @@ etbs が配布する WordPress プラグイン。共通ルールの正本は `~/
 - 文言は日本語で直接書く（readme.txt は置かない。翻訳ファイルも作らない）
 - 時刻・入力値・保存済みの値は引数で受け取る関数にし、`$_POST`・`$_GET`・`time()` を直接読む箇所はフックの入口だけにする
 
+## 移行コマンド（VK のスライダーからスライドを作る）
+
+既存の VK Blocks のスライダーを、このプラグインのスライドに移す WP-CLI コマンド。導入先で数十枚を手で写さずに移すために使う（`docs/spec.md` §8）。
+
+```
+wp etss import-vk-slider <post_id> --slider=<スライダーの ID> [--index=0] [--start=2026-11-06T12:00] [--update-options] [--dry-run]
+```
+
+- `<post_id>`: VK のスライダーを置いている投稿（固定ページ）の ID。`--slider`: 移し先のスライダー（`etss_slider`）の投稿 ID。先に管理画面か `wp post create --post_type=etss_slider` で作っておく（ひな形は先に決める。スライドを作ったあとは変えられない）
+- 手順は 1. `--dry-run` で割り当ての表を確かめる → 2. 同じコマンドから `--dry-run` を外して実行 → 3. スライドの一覧で、下書きのもの（理由が表に出る）を直して「表示に登録」→ 4. 移したスライダーのブロック（`etss/slider`）をページに置き、元の VK のスライダーを外す
+- 画像は `wp-image-NNN` の class から添付ファイル ID を取る。リンク先は最初の `<a href>`、alt は画像の alt。理由のある項目（リンク先なし・存在しない添付ファイル・必須の画像枠が空・alt が空など）は、下書きで作られる
+- 画像が複数ある項目（横長・縦長など）は、ひな形の `import_item( array $parsed ): array`（枠 ID => 添付ファイル ID を返す）で割り当てる。`$parsed` の形は `docs/spec.md` §3。サイト固有のひな形は、そのサイトの mu-plugin に置く（この repo には入れない）。`import_item` が無いひな形は、1枚目の画像を最初の枠に入れる
+- `--update-options` を付けると、VK の動きの設定（自動で切り替える・間隔・速さ・ドット・ループなど）をスライダーの設定へ写す。付けなければスライダーの設定は変えない。一時停止ボタンとズームは写せない（警告が出る）
+- `--start` の既定は今（付けるとその日時に表示が始まる。サイトのタイムゾーン）。表示順は元の並び。表示終了は付けない
+- 同じ投稿に2回実行すると、同じスライドがもう一度作られる（置き換えはしない。すでにスライドがあるスライダーには警告が出る）。やり直すときは、できたスライドをゴミ箱へ入れてから実行する
+- VK の HTML を取り出す処理はテスト済みだが、導入先の本文の書き方（画像ブロックでなく HTML ブロックで貼ってあるなど）によっては、画像が見つからず下書きになる。まず `--dry-run` で確かめる
+
 ## 版数
 
 版数は**ヘッダの `Version:` 1か所のみ**。CSS・JS の版は `get_file_data()` でヘッダから読む。block.json に `version` を書かない。
@@ -61,6 +78,8 @@ Local の `ai-wp-demo`（`aiwpdemo.etbs.lc`）に、VK Blocks（wordpress.org �
     3. `curl -D -` で `/` と `/?etss_purge=1` を取り、`X-LiteSpeed-Cache-Control: public,max-age=600`・`X-LiteSpeed-Tag: b3c_etss,…`・`X-LiteSpeed-Purge: public,b3c_etss` とログを確かめる
   - 7.9.1 では `SetEnv` が無くても purge のヘッダとログは出た。CLI の purge（`wp plugin deactivate`）は「CLI request, queue stored」としてログに残る
 - Local のサイトが GUI で止まっているときは、Local の設定ファイル（`~/Library/Application Support/Local/run/<サイト ID>/conf/`）で mysqld・php-fpm・httpd を手で起動できる。ただし php-fpm は Local の `php-fpm.conf` の `include` が相対パスで通らないので、絶対パスの `include` を書いた自前の conf を `-y` で渡す。**終わったら必ず3つとも止める**（止めないと、あとで GUI からサイトを起動したときにポートが衝突する）
+  - 起動する実行ファイルは、httpd が `lightning-services/apache-2.4.43+11/bin/darwin/bin/httpd`（x86_64。`darwin-arm64` の httpd は同じ階層の modules が合わず起動しない）、mysqld が `mysql-8.0.35+4/bin/darwin-arm64/bin/mysqld`、php-fpm が `php-8.3.17+1/bin/darwin-arm64/sbin/php-fpm`（`bin/` ではなく `sbin/`）。WP-CLI は Local の `extraResources/bin/wp-cli/wp-cli.phar` を、`darwin-arm64` の php で動かす
+  - Local の `php.ini` は imagick と xdebug の拡張（x86_64 用）を読もうとして、CLI の出力が起動時の警告で埋まる。その2行を除いた写しを作って `-c` で渡すと静かになる（Local の設定ファイルは書き換えない）
 - WP_DEBUG は `wp-config.php` を触らずに有効にする。CLI は `wp --require=<define 3行のファイル>`（`WP_DEBUG`・`WP_DEBUG_LOG`・`WP_DEBUG_DISPLAY`）、Web は php-fpm の `-d auto_prepend_file=<同じファイル>`。ログが作られなければ、通知も警告も出ていない
 - ★ ai-wp-demo は他のプラグインと共用の検証サイト。LiteSpeed Cache は有効化のときと、その後最初に管理画面を開いたときに `.htaccess` を書き換える。入れる前に `.htaccess` を控え、md5 を記録する
   - #1 の実測: 有効化前 `7fb26e61920d1bb387b6effebb071790`（15行）→ LSCWP 有効化後 `d4c495a541a9b879063d74af01b0d3b5`（`# BEGIN LSCACHE`〜`# END NON_LSCACHE` が先頭に入る）→ 停止後 `9bd4157f7bc7f73dde46f5d1401508c5`（空の `LSCACHE`・`NON_LSCACHE` の枠が残る）。控えを書き戻して `7fb26e61…` に戻した

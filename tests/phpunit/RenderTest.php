@@ -465,6 +465,20 @@ class RenderTest extends TestCase {
 		$missing = ETSS_Templates::render_vk_image( $this->slide( array( 'images' => array( 'image' => 99 ) ) ), array() );
 		$this->assertSame( '', $missing, '画像が出せないときは空文字' );
 
+		// 画像ブロックのスタイルを読み込む（読み込まれないと、元の VK のスライダーと高さが変わる）。
+		$GLOBALS['etss_test_registered_styles'] = array( 'wp-block-image' );
+		$GLOBALS['etss_test_enqueued_styles']   = array();
+		ETSS_Templates::render_vk_image( $this->slide(), array( 'is_first' => false ) );
+		$this->assertSame( array( 'wp-block-image' ), $GLOBALS['etss_test_enqueued_styles'], '画像を出したら、画像ブロックのスタイルを読み込む' );
+
+		$GLOBALS['etss_test_enqueued_styles'] = array();
+		ETSS_Templates::render_vk_image( $this->slide( array( 'images' => array( 'image' => 99 ) ) ), array() );
+		$this->assertSame( array(), $GLOBALS['etss_test_enqueued_styles'], '画像が出せないときは、スタイルを読み込まない' );
+
+		$GLOBALS['etss_test_registered_styles'] = array();
+		ETSS_Templates::render_vk_image( $this->slide(), array( 'is_first' => false ) );
+		$this->assertSame( array(), $GLOBALS['etss_test_enqueued_styles'], '登録されていないスタイルは読み込まない' );
+
 		$template = ETSS_Templates::normalize( 'vk-image', ETSS_Templates::builtin_vk_image() );
 		$this->assertSame( array(), $template['errors'], '本体のひな形は定義の検査を通る' );
 		$this->assertTrue( is_callable( $template['template']['render_item'] ), 'render_item が呼び出せる' );
