@@ -38,8 +38,9 @@ class ETSS_Slider_Admin {
 
 	/**
 	 * スライダーを置くブロックの、管理画面での呼び方。
+	 * blocks/slider/block.json の title と同じ文字列にする（片方だけ変えると、案内とブロックの一覧の名前が食い違う）。
 	 */
-	const BLOCK_TITLE = 'ETBS スライダー';
+	const BLOCK_TITLE = '予約スライダー';
 
 	/**
 	 * 「置いているページ」を探すときに読む投稿の上限。
