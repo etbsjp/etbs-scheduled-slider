@@ -35,8 +35,9 @@
 - メタ
   - `_etss_template`：ひな形の ID（既定 `vk-image`）
   - `_etss_options`：動きの設定（配列）。項目と既定値は VK のスライダーのブロックに合わせる
-    - `autoPlay` true / `autoPlayStop` true / `autoPlayDelay` 2500 / `pagination` bullets / `loop` true / `effect` slide / `speed` 300
+    - `autoPlay` true / `autoPlayStop` true / `autoPlayDelay` 2500 / `pagination` bullets / `navigationPosition` mobile-bottom / `loop` true / `effect` slide / `speed` 300
     - `slidesPerViewMobile` 1 / `slidesPerViewTablet` 1 / `slidesPerViewPC` 1 / `slidesPerGroup` one-by-one / `centeredSlides` false / `width` ''
+    - `navigationPosition`（前後の矢印の位置）は VK Blocks 1.128.0 のスライダーと同じ4つ: `hide`（非表示）・`center`（中央）・`mobile-bottom`（モバイルでは下部に表示）・`always-bottom`（すべてのデバイスで下部に表示）。選択肢にない値は既定に戻す。保存されていない既存のスライダーは `mobile-bottom`（今までの動きと同じ）
   - `_etss_extra_class`：外枠に足す class（任意。サイトの追加 CSS に合わせるため）
 
 ### 2.2 スライド（`etss_slide`）
@@ -103,7 +104,7 @@
 ### 4.2 スライダーの編集画面
 
 - ひな形を選ぶ。スライドが1枚でもあるときは変えられない（画像枠が合わなくなるため）
-- 動きの設定は §2.1 の項目を並べる
+- 動きの設定は §2.1 の項目を並べる。矢印の位置は「ナビゲーション（前後の矢印）の位置」のプルダウンで、選択肢の文言は VK の編集画面（ナビゲーションの位置・非表示・中央・モバイルでは下部に表示）に合わせる
 - 「このスライダーを置く」の説明に、ブロック名と、置いているページへのリンクを出す（`has_block` で探す）
 
 ### 4.3 スライドの編集画面
@@ -247,7 +248,7 @@
 - 描画は `render_block()` に `blockName => 'vk-blocks/slider'` と組み立てた HTML を渡す。VK のブロックとして描画させ、CSS と JS の読み込みを WP に任せる
   - 外枠: `wp-block-vk-blocks-slider swiper vk_slider vk_slider_<blockId> [alignfull|alignwide] etss-slider etss-slider-<ID> <extra_class>` と `data-vkb-slider`（VK のブロックが保存する項目と同じ並び。`width` は full・wide のとき `alignfull`・`alignwide` にする）
     - VK 1.128.0 の保存 HTML に `swiper-container` は無いので付けない
-    - 中は `swiper-wrapper`（スライド項目）→ 矢印（`swiper-button-next`・`swiper-button-prev`。VK の既定の `mobile-bottom`）→ ドット（`pagination` が hide のときは出さない）
+    - 中は `swiper-wrapper`（スライド項目）→ 矢印（`swiper-button-next`・`swiper-button-prev`。class は `swiper-button-<navigationPosition>`。`hide` のときは VK の保存 HTML と同じく、要素そのものを出さない）→ ドット（`pagination` が hide のときは出さない）
     - スライド項目: `wp-block-vk-blocks-slider-item vk_slider_item swiper-slide <item_class>` の div に、`vk_slider_item-background-area` と `vk_slider_item_container`（中にひな形の HTML）を入れる
   - `blockId` は `etss-<スライダーの ID>`。同じスライダーを1ページに2回以上置いたときは、2回目以降を `etss-<ID>-2`・`etss-<ID>-3` にする（同じ class だと VK の JS が1つ目しか起動しないため）
   - VK の JS は `.vk_slider_<blockId>` で Swiper を起動するので、class と blockId を必ず揃える
@@ -354,6 +355,7 @@
   - alt が空の項目も作れるよう、作る間だけ、タイトルが空の投稿を拒む WordPress の判定（`wp_insert_post_empty_content`）を外す
   - `--update-options` を付けたときだけ、VK の `data-vkb-slider` の設定を、スライダーの動きの設定（§2.1）に写す（`ETSS_Import::map_options()`）
     - 写すのは §2.1 の項目のうち VK の設定にあるもの。保存時と同じ整形を通し、選択肢にない値・数でない値は、いまの値のままにする
+    - 矢印の位置 `navigationPosition` は `data-vkb-slider` に入らないため、ブロックの属性から読む（`ETSS_Import::parse_navigation_position()`）。属性が無い（VK は既定のときは書かない）・選択肢にないときは、HTML の矢印の class で代え、それも読めなければ `mobile-bottom`
     - 付けなかったときは、変わる項目だけを一覧で出し、スライダーの設定は変えない
     - このプラグインに無い機能（一時停止ボタン `pauseButton`・ズーム `zoomAnimation`）が VK で使われていれば、写せないと警告する
   - `--dry-run` は何も作らず、割り当ての表（#・代替テキスト・リンク先・画像・状態・理由）と、動きの設定の変わる項目を出す。作ったときは表に投稿 ID の列が付く

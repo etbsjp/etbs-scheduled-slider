@@ -23,21 +23,27 @@ class ETSS_Options {
 	 */
 	public static function choices() {
 		return array(
-			'pagination'     => array(
+			'pagination'         => array(
 				'bullets'     => 'ドット',
 				'fraction'    => '番号（1 / 5）',
 				'progressbar' => '進行バー',
 				'hide'        => '表示しない',
 			),
-			'effect'         => array(
+			'navigationPosition' => array(
+				'hide'          => '非表示',
+				'center'        => '中央',
+				'mobile-bottom' => 'モバイルでは下部に表示',
+				'always-bottom' => 'すべてのデバイスで下部に表示',
+			),
+			'effect'             => array(
 				'slide' => 'スライド',
 				'fade'  => 'フェード',
 			),
-			'slidesPerGroup' => array(
+			'slidesPerGroup'     => array(
 				'one-by-one'      => '1枚ずつ',
 				'slides-per-view' => '見えている枚数ずつ',
 			),
-			'width'          => array(
+			'width'              => array(
 				''     => '標準',
 				'wide' => '幅広',
 				'full' => '全幅',

@@ -104,6 +104,42 @@ class OptionsTest extends TestCase {
 				'expected'            => 20.0,
 			),
 			array(
+				'test_condition_name' => '矢印の位置が hide => そのまま',
+				'input'               => array( 'navigationPosition' => 'hide' ),
+				'key'                 => 'navigationPosition',
+				'expected'            => 'hide',
+			),
+			array(
+				'test_condition_name' => '矢印の位置が center => そのまま',
+				'input'               => array( 'navigationPosition' => 'center' ),
+				'key'                 => 'navigationPosition',
+				'expected'            => 'center',
+			),
+			array(
+				'test_condition_name' => '矢印の位置が always-bottom => そのまま',
+				'input'               => array( 'navigationPosition' => 'always-bottom' ),
+				'key'                 => 'navigationPosition',
+				'expected'            => 'always-bottom',
+			),
+			array(
+				'test_condition_name' => '矢印の位置が選択肢にない => 既定の mobile-bottom',
+				'input'               => array( 'navigationPosition' => 'top' ),
+				'key'                 => 'navigationPosition',
+				'expected'            => 'mobile-bottom',
+			),
+			array(
+				'test_condition_name' => '矢印の位置が送信されない => 既定の mobile-bottom',
+				'input'               => array(),
+				'key'                 => 'navigationPosition',
+				'expected'            => 'mobile-bottom',
+			),
+			array(
+				'test_condition_name' => '矢印の位置が文字列でない => 既定の mobile-bottom',
+				'input'               => array( 'navigationPosition' => array( 'hide' ) ),
+				'key'                 => 'navigationPosition',
+				'expected'            => 'mobile-bottom',
+			),
+			array(
 				'test_condition_name' => '選択肢にある値 => そのまま',
 				'input'               => array( 'effect' => 'fade' ),
 				'key'                 => 'effect',
