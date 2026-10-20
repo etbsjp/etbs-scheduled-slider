@@ -197,6 +197,7 @@ class ETSS_Slider_Admin {
 		// 見せ方。
 		echo '<fieldset class="etss-fieldset"><legend>見せ方</legend>';
 		self::render_select( $name, 'pagination', 'ページの印（ドットなど）', $options );
+		self::render_select( $name, 'navigationPosition', 'ナビゲーション（前後の矢印）の位置', $options );
 		self::render_number( $name, 'slidesPerViewPC', '一度に見せる枚数（パソコン）', $options, '1.5 のように小数にすると、次のスライドが少し見えます。' );
 		self::render_number( $name, 'slidesPerViewTablet', '一度に見せる枚数（タブレット）', $options, '' );
 		self::render_number( $name, 'slidesPerViewMobile', '一度に見せる枚数（スマートフォン）', $options, '' );

@@ -176,7 +176,7 @@ class ETSS_Import {
 	 * VK のスライダーから、設定とスライダー項目ごとの取り出し結果を得る。
 	 *
 	 * @param array $slider VK のスライダーのブロック。
-	 * @return array `settings`（parse_settings() の結果）・`items`（parse_item() の結果の配列。元の並び）。
+	 * @return array `settings`（parse_settings() の結果に、矢印の位置 `navigationPosition` を足したもの）・`items`（parse_item() の結果の配列。元の並び）。
 	 */
 	public static function parse_slider( array $slider ) {
 		$items = array();
@@ -189,9 +189,37 @@ class ETSS_Import {
 		}
 
 		return array(
-			'settings' => self::parse_settings( $slider ),
+			'settings' => array_merge( self::parse_settings( $slider ), array( 'navigationPosition' => self::parse_navigation_position( $slider ) ) ),
 			'items'    => $items,
 		);
+	}
+
+	/**
+	 * VK のスライダーの矢印の位置を取り出す。
+	 *
+	 * `data-vkb-slider` には入らないので、ブロックの属性から読む（既定の `mobile-bottom` のときは属性に書かれない）。
+	 * 属性が無い・選択肢にないときは、HTML の矢印の class で代え、それも読めなければ VK の既定にする。
+	 *
+	 * @param array $slider VK のスライダーのブロック。
+	 * @return string 矢印の位置（`hide`・`center`・`mobile-bottom`・`always-bottom` のどれか）。
+	 */
+	public static function parse_navigation_position( array $slider ) {
+		$choices  = ETSS_Options::choices();
+		$choices  = $choices['navigationPosition'];
+		$fallback = 'mobile-bottom';
+
+		// ブロックの属性。
+		if ( isset( $slider['attrs']['navigationPosition'] ) && is_string( $slider['attrs']['navigationPosition'] ) && array_key_exists( $slider['attrs']['navigationPosition'], $choices ) ) {
+			return $slider['attrs']['navigationPosition'];
+		}
+
+		// HTML の矢印の class。
+		$html = isset( $slider['innerHTML'] ) ? (string) $slider['innerHTML'] : '';
+		if ( preg_match( '/swiper-button-next\s+swiper-button-([a-z-]+)/', $html, $matches ) && array_key_exists( $matches[1], $choices ) ) {
+			return $matches[1];
+		}
+
+		return $fallback;
 	}
 
 	/**

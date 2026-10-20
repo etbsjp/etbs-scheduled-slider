@@ -397,6 +397,47 @@ class RenderTest extends TestCase {
 	}
 
 	/**
+	 * ETSS_Render::navigation_html() と、slider_html() の矢印のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_navigation_html() {
+		$test_cases = array(
+			array(
+				'test_condition_name' => 'mobile-bottom => 矢印2つに swiper-button-mobile-bottom',
+				'position'            => 'mobile-bottom',
+				'expected'            => '<div class="swiper-button-next swiper-button-mobile-bottom"></div><div class="swiper-button-prev swiper-button-mobile-bottom"></div>',
+			),
+			array(
+				'test_condition_name' => 'center => swiper-button-center',
+				'position'            => 'center',
+				'expected'            => '<div class="swiper-button-next swiper-button-center"></div><div class="swiper-button-prev swiper-button-center"></div>',
+			),
+			array(
+				'test_condition_name' => 'always-bottom => swiper-button-always-bottom',
+				'position'            => 'always-bottom',
+				'expected'            => '<div class="swiper-button-next swiper-button-always-bottom"></div><div class="swiper-button-prev swiper-button-always-bottom"></div>',
+			),
+			array(
+				'test_condition_name' => 'hide => 要素を出さない（VK の保存 HTML と同じ）',
+				'position'            => 'hide',
+				'expected'            => '',
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$this->assertSame( $case['expected'], ETSS_Render::navigation_html( $case['position'] ), $case['test_condition_name'] );
+
+			$options = array_merge( ETSS_Meta::default_options(), array( 'navigationPosition' => $case['position'] ) );
+			$html    = ETSS_Render::slider_html( 5, 'etss-5', $options, array(), '' );
+			$this->assertStringContainsString( '<div class="swiper-wrapper"></div>' . $case['expected'] . '<div class="swiper-pagination', $html, $case['test_condition_name'] . '（スライダー全体では swiper-wrapper とドットの間）' );
+		}
+
+		$default_html = ETSS_Render::slider_html( 5, 'etss-5', ETSS_Meta::default_options(), array(), '' );
+		$this->assertStringContainsString( 'swiper-button-next swiper-button-mobile-bottom', $default_html, '既定は mobile-bottom（既存のスライダーの見た目は変わらない）' );
+	}
+
+	/**
 	 * ETSS_Render::vk_settings() と parsed_block() のテスト。
 	 *
 	 * @return void

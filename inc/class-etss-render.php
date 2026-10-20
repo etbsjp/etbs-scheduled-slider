@@ -221,10 +221,26 @@ class ETSS_Render {
 	}
 
 	/**
+	 * 前後に送る矢印の HTML を作る。VK のスライダーの保存 HTML と同じく、`hide` のときは要素そのものを出さない。
+	 *
+	 * @param string $position 矢印の位置（`hide`・`center`・`mobile-bottom`・`always-bottom`）。
+	 * @return string HTML。
+	 */
+	public static function navigation_html( $position ) {
+		if ( 'hide' === $position ) {
+			return '';
+		}
+
+		$class = 'swiper-button-' . esc_attr( $position );
+
+		return '<div class="swiper-button-next ' . $class . '"></div><div class="swiper-button-prev ' . $class . '"></div>';
+	}
+
+	/**
 	 * スライダー全体の HTML を作る。VK のスライダー（`vk-blocks/slider`）が保存する HTML と同じ形。
 	 *
 	 * 外枠は `wp-block-vk-blocks-slider swiper vk_slider vk_slider_<blockId> etss-slider etss-slider-<ID> <追加の class>`。
-	 * 矢印・ドットは VK の既定（矢印は mobile-bottom）と同じ。ドットは `pagination` が hide のときは出さない。
+	 * 矢印は `navigationPosition` の位置（hide のときは出さない）。ドットは `pagination` が hide のときは出さない。
 	 *
 	 * @param int    $slider_id   スライダーの投稿 ID。
 	 * @param string $block_id    VK の blockId。
@@ -252,8 +268,7 @@ class ETSS_Render {
 		$settings = wp_json_encode( self::vk_settings( $block_id, $options ) );
 		$html     = '<div class="' . esc_attr( implode( ' ', $classes ) ) . '" data-vkb-slider="' . esc_attr( $settings ) . '">';
 		$html    .= '<div class="swiper-wrapper">' . implode( '', $slide_htmls ) . '</div>';
-		$html    .= '<div class="swiper-button-next swiper-button-mobile-bottom"></div>';
-		$html    .= '<div class="swiper-button-prev swiper-button-mobile-bottom"></div>';
+		$html    .= self::navigation_html( $options['navigationPosition'] );
 
 		if ( 'hide' !== $options['pagination'] ) {
 			$html .= '<div class="swiper-pagination swiper-pagination-' . esc_attr( $options['pagination'] ) . '"></div>';

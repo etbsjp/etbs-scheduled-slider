@@ -120,7 +120,8 @@ class PostTypesTest extends TestCase {
 		}
 
 		$defaults = ETSS_Meta::default_options();
-		$this->assertCount( 13, $defaults, '動きの設定は13項目（spec §2.1）' );
+		$this->assertCount( 14, $defaults, '動きの設定は14項目（spec §2.1）' );
+		$this->assertSame( 'mobile-bottom', $defaults['navigationPosition'], 'navigationPosition の既定は VK と同じ' );
 		$this->assertSame( 2500, $defaults['autoPlayDelay'], 'autoPlayDelay の既定' );
 		$this->assertSame( 'bullets', $defaults['pagination'], 'pagination の既定' );
 		$this->assertTrue( $defaults['loop'], 'loop の既定' );

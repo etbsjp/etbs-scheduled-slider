@@ -174,6 +174,16 @@ class TemplatesTest extends TestCase {
 				'expected_errors'     => 1,
 			),
 			array(
+				'test_condition_name' => 'default_options に navigationPosition => エラー無し',
+				'input'               => array( 'a', $this->valid_args( array( 'default_options' => array( 'navigationPosition' => 'center' ) ) ) ),
+				'expected_errors'     => 0,
+			),
+			array(
+				'test_condition_name' => 'default_options に navigation_position（綴りの違い）=> エラー',
+				'input'               => array( 'a', $this->valid_args( array( 'default_options' => array( 'navigation_position' => 'center' ) ) ) ),
+				'expected_errors'     => 1,
+			),
+			array(
 				'test_condition_name' => 'default_options が配列でない => エラー',
 				'input'               => array( 'a', $this->valid_args( array( 'default_options' => 'x' ) ) ),
 				'expected_errors'     => 1,
@@ -282,8 +292,9 @@ class TemplatesTest extends TestCase {
 			$this->valid_args(
 				array(
 					'default_options' => array(
-						'pagination' => 'hide',
-						'speed'      => 800,
+						'pagination'         => 'hide',
+						'speed'              => 800,
+						'navigationPosition' => 'center',
 					),
 				)
 			)
@@ -292,6 +303,7 @@ class TemplatesTest extends TestCase {
 		$options = ETSS_Templates::default_options( 'with-options' );
 		$this->assertSame( 'hide', $options['pagination'], 'ひな形の指定が本体の既定を上書きする' );
 		$this->assertSame( 800, $options['speed'], 'ひな形の指定が本体の既定を上書きする（数値）' );
+		$this->assertSame( 'center', $options['navigationPosition'], 'ひな形の指定が本体の既定を上書きする（矢印の位置）' );
 		$this->assertTrue( $options['loop'], '指定の無い項目は本体の既定' );
 
 		$this->assertSame( ETSS_Meta::default_options(), ETSS_Templates::default_options( 'vk-image' ), 'vk-image は本体の既定のまま' );

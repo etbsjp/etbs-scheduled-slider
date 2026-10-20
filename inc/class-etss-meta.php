@@ -122,6 +122,7 @@ class ETSS_Meta {
 			'autoPlayStop'        => true,
 			'autoPlayDelay'       => 2500,
 			'pagination'          => 'bullets',
+			'navigationPosition'  => 'mobile-bottom',
 			'loop'                => true,
 			'effect'              => 'slide',
 			'speed'               => 300,

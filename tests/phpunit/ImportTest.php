@@ -291,6 +291,72 @@ class ImportTest extends TestCase {
 	}
 
 	/**
+	 * ETSS_Import::parse_navigation_position() のテスト。
+	 *
+	 * @return void
+	 */
+	public function test_parse_navigation_position() {
+		$test_cases = array(
+			array(
+				'test_condition_name' => '属性が center => center',
+				'slider'              => array( 'attrs' => array( 'navigationPosition' => 'center' ) ),
+				'expected'            => 'center',
+			),
+			array(
+				'test_condition_name' => '属性が hide => hide',
+				'slider'              => array( 'attrs' => array( 'navigationPosition' => 'hide' ) ),
+				'expected'            => 'hide',
+			),
+			array(
+				'test_condition_name' => '属性が always-bottom => always-bottom',
+				'slider'              => array( 'attrs' => array( 'navigationPosition' => 'always-bottom' ) ),
+				'expected'            => 'always-bottom',
+			),
+			array(
+				'test_condition_name' => '属性なし（既定のときは書かれない）=> mobile-bottom',
+				'slider'              => array(
+					'attrs'     => array(),
+					'innerHTML' => '<div class="vk_slider"></div>',
+				),
+				'expected'            => 'mobile-bottom',
+			),
+			array(
+				'test_condition_name' => '属性が選択肢にない => 既定の mobile-bottom',
+				'slider'              => array( 'attrs' => array( 'navigationPosition' => 'top' ) ),
+				'expected'            => 'mobile-bottom',
+			),
+			array(
+				'test_condition_name' => '属性なしで HTML の矢印の class が center => center',
+				'slider'              => array(
+					'attrs'     => array(),
+					'innerHTML' => '<div class="swiper-button-next swiper-button-center"></div>',
+				),
+				'expected'            => 'center',
+			),
+			array(
+				'test_condition_name' => '属性なしで HTML の矢印の class が選択肢にない => 既定の mobile-bottom',
+				'slider'              => array(
+					'attrs'     => array(),
+					'innerHTML' => '<div class="swiper-button-next swiper-button-weird"></div>',
+				),
+				'expected'            => 'mobile-bottom',
+			),
+			array(
+				'test_condition_name' => '属性が文字列でない => 既定の mobile-bottom',
+				'slider'              => array( 'attrs' => array( 'navigationPosition' => array( 'hide' ) ) ),
+				'expected'            => 'mobile-bottom',
+			),
+		);
+
+		foreach ( $test_cases as $case ) {
+			$this->assertSame( $case['expected'], ETSS_Import::parse_navigation_position( $case['slider'] ), $case['test_condition_name'] );
+		}
+
+		$parsed = $this->fixture_parsed();
+		$this->assertSame( 'mobile-bottom', $parsed['settings']['navigationPosition'], 'ai-wp-demo の設定（属性なし）は mobile-bottom' );
+	}
+
+	/**
 	 * ETSS_Import::parse_item() のテスト。
 	 *
 	 * @return void
@@ -935,6 +1001,46 @@ class ImportTest extends TestCase {
 					'autoPlay'        => false,
 					'loop'            => false,
 				),
+				'expected_unsupp'     => array(),
+			),
+			array(
+				'test_condition_name' => 'VK の矢印の位置が center => スライダーの設定も center',
+				'vk'                  => array( 'navigationPosition' => 'center' ),
+				'current'             => $defaults,
+				'expected_changes'    => array( 'navigationPosition' ),
+				'expected_options'    => array( 'navigationPosition' => 'center' ),
+				'expected_unsupp'     => array(),
+			),
+			array(
+				'test_condition_name' => 'VK の矢印の位置が hide => スライダーの設定も hide',
+				'vk'                  => array( 'navigationPosition' => 'hide' ),
+				'current'             => $defaults,
+				'expected_changes'    => array( 'navigationPosition' ),
+				'expected_options'    => array( 'navigationPosition' => 'hide' ),
+				'expected_unsupp'     => array(),
+			),
+			array(
+				'test_condition_name' => 'VK の矢印の位置が mobile-bottom でスライダーが center => mobile-bottom に戻す',
+				'vk'                  => array( 'navigationPosition' => 'mobile-bottom' ),
+				'current'             => array_merge( $defaults, array( 'navigationPosition' => 'center' ) ),
+				'expected_changes'    => array( 'navigationPosition' ),
+				'expected_options'    => array( 'navigationPosition' => 'mobile-bottom' ),
+				'expected_unsupp'     => array(),
+			),
+			array(
+				'test_condition_name' => 'VK に矢印の位置が無い => スライダーの設定のまま',
+				'vk'                  => array( 'speed' => 300 ),
+				'current'             => array_merge( $defaults, array( 'navigationPosition' => 'always-bottom' ) ),
+				'expected_changes'    => array(),
+				'expected_options'    => array( 'navigationPosition' => 'always-bottom' ),
+				'expected_unsupp'     => array(),
+			),
+			array(
+				'test_condition_name' => 'VK の矢印の位置が選択肢にない => いまの値のまま',
+				'vk'                  => array( 'navigationPosition' => 'top' ),
+				'current'             => array_merge( $defaults, array( 'navigationPosition' => 'center' ) ),
+				'expected_changes'    => array(),
+				'expected_options'    => array( 'navigationPosition' => 'center' ),
 				'expected_unsupp'     => array(),
 			),
 			array(
